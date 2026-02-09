@@ -153,8 +153,8 @@ MonoBehaviour:
   walkCycleTime: 0.3
   obstacleLayer:
     serializedVersion: 2
-    m_Bits: 0
-  gridSize: {x: 50, y: 50}
+    m_Bits: 64
+  gridSize: {x: 17, y: 17}
   cellSize: 1
 --- !u!50 &-6926344824489527892
 Rigidbody2D:

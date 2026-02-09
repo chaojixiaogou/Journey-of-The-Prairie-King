@@ -1,264 +1,343 @@
 using UnityEngine;
 using System.Collections.Generic;
-using System;
 
 [RequireComponent(typeof(Rigidbody2D))]
 public class Enemy : MonoBehaviour
 {
-    // === 基础属性 ===
+    // === 可配置参数 ===
     public int maxHealth = 50;
-    private int currentHealth;
-    public int damageToPlayer = 10;
     public float moveSpeed = 2f;
-    public float updatePathInterval = 0.5f; // 每隔多久重新计算路径
+    public float pathUpdateInterval = 1.0f;
+    public LayerMask obstacleLayer;
 
-    // === 行走动画 ===
-    public Sprite walkLeft;
-    public Sprite walkRight;
-    public float walkCycleTime = 0.3f;
-
-    // === 寻路依赖 ===
-    public LayerMask obstacleLayer; // 障碍物层
-    public Vector2Int gridSize = new Vector2Int(20, 15); // 地图逻辑尺寸（格子数）
-    public float cellSize = 1f; // 每格多少 Unity 单位（应 = Tilemap Cell Size / PPU）
+    // === 行走动画资源（仅需这两张图）===
+    public Sprite walkLeft;   // 迈左脚帧
+    public Sprite walkRight;  // 迈右脚帧
 
     // === 内部状态 ===
-    private Transform player;
+    private int currentHealth;
     private SpriteRenderer spriteRenderer;
-    private Rigidbody2D rb;
-    private List<Vector3> path = new List<Vector3>();
-    private int currentWaypointIndex = 0;
-    private float walkTimer = 0f;
-    private bool isWalking = false;
+    private Transform player;
+    private List<Vector3> currentPath = new List<Vector3>();
+    private int currentPathIndex = 0;
+    private float lastPathUpdateTime = -999f;
+    private const int MAX_SEARCH_NODES = 100;
+
+    // === 贴墙滑动 ===
+    private bool isSlidingWall = false;
+    private Vector2 wallSlideDirection = Vector2.zero;
+    private float wallSlideTimer = 0f;
+    private const float WALL_SLIDE_DURATION = 0.6f;
+
+    // === 方向缓存（用于移动，非动画）===
+    private Vector2 lastMovementDirection = Vector2.right;
+
+    // === 防卡死 ===
+    private Vector2 lastPosition;
+    private float stuckTime = 0f;
+
+    // === 行走动画控制 ===
+    private float walkAnimTimer = 0f;
+    private bool isOnLeftFoot = true;
+    private const float WALK_ANIM_INTERVAL = 0.25f; // 每0.25秒切换一次脚
+    private bool isMovingThisFrame = false;
 
     void Start()
     {
         currentHealth = maxHealth;
-        player = GameObject.FindGameObjectWithTag("Player")?.transform;
         spriteRenderer = GetComponent<SpriteRenderer>();
-        rb = GetComponent<Rigidbody2D>();
-        rb.bodyType = RigidbodyType2D.Kinematic; // 使用 Kinematic
+        var rb = GetComponent<Rigidbody2D>();
+        rb.bodyType = RigidbodyType2D.Kinematic;
         rb.simulated = true;
 
+        player = GameObject.FindGameObjectWithTag("Player")?.transform;
+        if (player == null)
+        {
+            Debug.LogError("[Enemy] 找不到 Tag 为 'Player' 的对象！");
+            enabled = false;
+            return;
+        }
+
+        EnsureNotInsideObstacle();
+        lastPosition = transform.position;
+
+        // 初始化第一帧动画
         if (spriteRenderer != null && walkRight != null)
             spriteRenderer.sprite = walkRight;
+    }
 
-        if (player != null)
-            InvokeRepeating(nameof(UpdatePath), 0f, updatePathInterval);
+    void EnsureNotInsideObstacle()
+    {
+        Vector2 pos = transform.position;
+        if (Physics2D.OverlapCircle(pos, 0.25f, obstacleLayer) != null)
+        {
+            Vector2[] offsets = {
+                Vector2.zero,
+                Vector2.right * 0.3f, Vector2.left * 0.3f,
+                Vector2.up * 0.3f, Vector2.down * 0.3f,
+                new Vector2(0.3f, 0.3f), new Vector2(-0.3f, 0.3f),
+                new Vector2(0.3f, -0.3f), new Vector2(-0.3f, -0.3f)
+            };
+
+            foreach (var offset in offsets)
+            {
+                Vector2 testPos = pos + offset;
+                if (Physics2D.OverlapCircle(testPos, 0.25f, obstacleLayer) == null)
+                {
+                    transform.position = testPos;
+                    lastPosition = transform.position;
+                    break;
+                }
+            }
+        }
     }
 
     void Update()
     {
-        if (player == null || path.Count == 0) return;
-
-        // 移动到下一个路径点
-        MoveOnPath();
-    }
-
-    void UpdatePath()
-    {
         if (player == null) return;
 
-        Vector3 startPos = transform.position;
-        Vector3 targetPos = player.position;
+        // 重置移动标记（关键！）
+        isMovingThisFrame = false;
 
-        path = FindPath(startPos, targetPos);
-        currentWaypointIndex = 0;
+        // === 卡死检测 ===
+        if (Vector2.Distance(transform.position, lastPosition) < 0.05f)
+        {
+            stuckTime += Time.deltaTime;
+        }
+        else
+        {
+            stuckTime = 0f;
+        }
+        lastPosition = transform.position;
+
+        // === 动态路径更新 ===
+        float updateInterval = stuckTime > 1.0f ? 0.3f : pathUpdateInterval;
+        if (Time.time - lastPathUpdateTime > updateInterval)
+        {
+            currentPath = FindPath(transform.position, player.position);
+            currentPathIndex = 0;
+            lastPathUpdateTime = Time.time;
+        }
+
+        // === 移动逻辑 ===
+        if (currentPath != null && currentPath.Count > 0)
+        {
+            FollowPath();
+        }
+        else
+        {
+            MoveDirectlyTowardsPlayer();
+        }
+
+        // === 更新行走动画 ===
+        UpdateWalkAnimation();
     }
 
+    void FollowPath()
+    {
+        if (currentPathIndex >= currentPath.Count)
+        {
+            MoveDirectlyTowardsPlayer();
+            return;
+        }
+
+        Vector3 target = currentPath[currentPathIndex];
+        if (Vector2.Distance(transform.position, target) < 0.4f)
+        {
+            currentPathIndex++;
+            if (currentPathIndex >= currentPath.Count)
+            {
+                MoveDirectlyTowardsPlayer();
+                return;
+            }
+            target = currentPath[currentPathIndex];
+        }
+
+        Vector2 direction = (target - transform.position).normalized;
+        MoveInDirection(direction);
+    }
+
+    void MoveDirectlyTowardsPlayer()
+    {
+        Vector2 direction = (player.position - transform.position).normalized;
+        MoveInDirection(direction);
+    }
+
+    void MoveInDirection(Vector2 rawDirection)
+    {
+        if (rawDirection.magnitude > 0.1f)
+        {
+            lastMovementDirection = rawDirection.normalized;
+        }
+
+        Vector2 desiredPos = (Vector2)transform.position + lastMovementDirection * moveSpeed * Time.deltaTime;
+
+        // === 尝试直行 ===
+        if (Physics2D.OverlapCircle(desiredPos, 0.25f, obstacleLayer) == null)
+        {
+            transform.position = desiredPos;
+            isMovingThisFrame = true;
+            return;
+        }
+
+        // === 尝试贴墙滑动 ===
+        if (!isSlidingWall)
+        {
+            Vector2 perpRight = new Vector2(-lastMovementDirection.y, lastMovementDirection.x);
+            Vector2 perpLeft = new Vector2(lastMovementDirection.y, -lastMovementDirection.x);
+
+            Vector2 testRight = (Vector2)transform.position + perpRight * moveSpeed * Time.deltaTime;
+            Vector2 testLeft = (Vector2)transform.position + perpLeft * moveSpeed * Time.deltaTime;
+
+            if (Physics2D.OverlapCircle(testRight, 0.25f, obstacleLayer) == null)
+            {
+                wallSlideDirection = perpRight;
+                isSlidingWall = true;
+                wallSlideTimer = 0f;
+            }
+            else if (Physics2D.OverlapCircle(testLeft, 0.25f, obstacleLayer) == null)
+            {
+                wallSlideDirection = perpLeft;
+                isSlidingWall = true;
+                wallSlideTimer = 0f;
+            }
+        }
+
+        if (isSlidingWall)
+        {
+            wallSlideTimer += Time.deltaTime;
+            if (wallSlideTimer <= WALL_SLIDE_DURATION)
+            {
+                Vector2 slidePos = (Vector2)transform.position + wallSlideDirection * moveSpeed * Time.deltaTime;
+                if (Physics2D.OverlapCircle(slidePos, 0.25f, obstacleLayer) == null)
+                {
+                    transform.position = slidePos;
+                    isMovingThisFrame = true;
+                    return;
+                }
+            }
+            isSlidingWall = false;
+        }
+    }
+
+    void UpdateWalkAnimation()
+    {
+        if (!isMovingThisFrame) return;
+
+        walkAnimTimer += Time.deltaTime;
+        if (walkAnimTimer >= WALK_ANIM_INTERVAL)
+        {
+            walkAnimTimer = 0f;
+            isOnLeftFoot = !isOnLeftFoot;
+        }
+
+        spriteRenderer.sprite = isOnLeftFoot ? walkLeft : walkRight;
+    }
+
+    // ===== A* 寻路系统 =====
     List<Vector3> FindPath(Vector3 start, Vector3 target)
     {
         Vector2Int startCell = WorldToCell(start);
         Vector2Int targetCell = WorldToCell(target);
-    
+
         if (!IsInBounds(startCell) || !IsInBounds(targetCell))
-            return new List<Vector3>();
-    
-        // 使用 Dictionary 模拟 openSet 和 closedSet
-        var openSet = new Dictionary<Vector2Int, float>(); // cell -> fScore
+            return null;
+
+        var openSet = new Dictionary<Vector2Int, float>();
         var closedSet = new HashSet<Vector2Int>();
         var cameFrom = new Dictionary<Vector2Int, Vector2Int>();
         var gScore = new Dictionary<Vector2Int, float>();
         var fScore = new Dictionary<Vector2Int, float>();
-    
+
         gScore[startCell] = 0;
         fScore[startCell] = Heuristic(startCell, targetCell);
         openSet[startCell] = fScore[startCell];
-    
+
+        int nodesSearched = 0;
         while (openSet.Count > 0)
         {
-            // 手动找出 fScore 最小的节点（代替 PriorityQueue）
+            if (++nodesSearched > MAX_SEARCH_NODES)
+                return null;
+
             Vector2Int current = GetLowestFScoreNode(openSet);
             openSet.Remove(current);
-    
+
             if (current == targetCell)
-            {
                 return ReconstructPath(cameFrom, current);
-            }
-    
+
             closedSet.Add(current);
-    
+
             foreach (var neighbor in GetNeighbors(current))
             {
                 if (closedSet.Contains(neighbor)) continue;
                 if (IsBlocked(neighbor)) continue;
-    
-                float tentativeGScore = gScore.GetValueOrDefault(current) + 1;
-    
-                if (!gScore.ContainsKey(neighbor) || tentativeGScore < gScore[neighbor])
+
+                float tentativeG = gScore.GetValueOrDefault(current) + 1;
+                if (!gScore.ContainsKey(neighbor) || tentativeG < gScore[neighbor])
                 {
                     cameFrom[neighbor] = current;
-                    gScore[neighbor] = tentativeGScore;
-                    fScore[neighbor] = tentativeGScore + Heuristic(neighbor, targetCell);
+                    gScore[neighbor] = tentativeG;
+                    fScore[neighbor] = tentativeG + Heuristic(neighbor, targetCell);
                     openSet[neighbor] = fScore[neighbor];
                 }
             }
         }
-    
-        return new List<Vector3>(); // 无路径
+        return null;
     }
-    
-    // 辅助方法：从 openSet 中找出 fScore 最小的节点
+
+    Vector2Int WorldToCell(Vector3 worldPos) => 
+        new Vector2Int(Mathf.RoundToInt(worldPos.x), Mathf.RoundToInt(worldPos.y));
+
+    Vector3 CellToWorld(Vector2Int cell) => new Vector3(cell.x, cell.y, 0);
+
+    bool IsInBounds(Vector2Int c) => c.x >= -8 && c.x <= 7 && c.y >= -8 && c.y <= 7;
+
+    bool IsBlocked(Vector2Int cell) =>
+        Physics2D.OverlapCircle(CellToWorld(cell), 0.4f, obstacleLayer) != null;
+
+    float Heuristic(Vector2Int a, Vector2Int b) =>
+        Mathf.Abs(a.x - b.x) + Mathf.Abs(a.y - b.y);
+
+    List<Vector2Int> GetNeighbors(Vector2Int cell) => new List<Vector2Int>
+    {
+        new Vector2Int(cell.x + 1, cell.y),
+        new Vector2Int(cell.x - 1, cell.y),
+        new Vector2Int(cell.x, cell.y + 1),
+        new Vector2Int(cell.x, cell.y - 1)
+    };
+
     Vector2Int GetLowestFScoreNode(Dictionary<Vector2Int, float> openSet)
     {
-        Vector2Int bestNode = default;
+        Vector2Int best = default;
         float bestScore = float.MaxValue;
         foreach (var kvp in openSet)
-        {
-            if (kvp.Value < bestScore)
-            {
-                bestScore = kvp.Value;
-                bestNode = kvp.Key;
-            }
-        }
-        return bestNode;
-    }
-
-    Vector2Int WorldToCell(Vector3 worldPos)
-    {
-        return new Vector2Int(
-            Mathf.RoundToInt(worldPos.x / cellSize),
-            Mathf.RoundToInt(worldPos.y / cellSize)
-        );
-    }
-
-    Vector3 CellToWorld(Vector2Int cell)
-    {
-        return new Vector3(cell.x * cellSize, cell.y * cellSize, 0);
-    }
-
-    bool IsInBounds(Vector2Int cell)
-    {
-        return cell.x >= -gridSize.x / 2 && cell.x <= gridSize.x / 2 &&
-               cell.y >= -gridSize.y / 2 && cell.y <= gridSize.y / 2;
-    }
-
-    bool IsBlocked(Vector2Int cell)
-    {
-        Vector3 worldPos = CellToWorld(cell);
-        Collider2D hit = Physics2D.OverlapCircle(worldPos, cellSize * 0.4f, obstacleLayer);
-        return hit != null;
-    }
-
-    float Heuristic(Vector2Int a, Vector2Int b)
-    {
-        // Manhattan 距离（适合网格）
-        return Mathf.Abs(a.x - b.x) + Mathf.Abs(a.y - b.y);
-    }
-
-    List<Vector2Int> GetNeighbors(Vector2Int cell)
-    {
-        var neighbors = new List<Vector2Int>
-        {
-            new Vector2Int(cell.x + 1, cell.y),
-            new Vector2Int(cell.x - 1, cell.y),
-            new Vector2Int(cell.x, cell.y + 1),
-            new Vector2Int(cell.x, cell.y - 1)
-        };
-        return neighbors;
+            if (kvp.Value < bestScore) { bestScore = kvp.Value; best = kvp.Key; }
+        return best;
     }
 
     List<Vector3> ReconstructPath(Dictionary<Vector2Int, Vector2Int> cameFrom, Vector2Int current)
     {
-        var totalPath = new List<Vector3> { CellToWorld(current) };
-        while (cameFrom.ContainsKey(current))
+        var path = new List<Vector3>();
+        while (cameFrom.TryGetValue(current, out Vector2Int prev))
         {
-            current = cameFrom[current];
-            totalPath.Insert(0, CellToWorld(current));
+            path.Add(CellToWorld(current));
+            current = prev;
         }
-        return totalPath;
+        path.Add(CellToWorld(current));
+        path.Reverse();
+        return path;
     }
 
-    void MoveOnPath()
-    {
-        if (currentWaypointIndex >= path.Count) return;
-
-        Vector3 target = path[currentWaypointIndex];
-        Vector2 direction = (target - transform.position).normalized;
-        Vector2 moveStep = direction * moveSpeed * Time.deltaTime;
-
-        // 手动碰撞检测（防止穿墙）
-        Vector2 newPosition = (Vector2)transform.position + moveStep;
-        if (!Physics2D.OverlapCircle(newPosition, 0.2f, obstacleLayer))
-        {
-            transform.position = newPosition;
-            isWalking = true;
-        }
-        else
-        {
-            isWalking = false;
-        }
-
-        // 到达当前路径点
-        if (Vector2.Distance(transform.position, target) < 0.1f)
-        {
-            currentWaypointIndex++;
-        }
-
-        // 行走动画
-        if (isWalking)
-        {
-            walkTimer += Time.deltaTime;
-            if (walkTimer >= walkCycleTime)
-            {
-                if (spriteRenderer.sprite == walkLeft)
-                    spriteRenderer.sprite = walkRight;
-                else
-                    spriteRenderer.sprite = walkLeft;
-                walkTimer = 0f;
-            }
-        }
-    }
-
-    // === 受伤 & 死亡 ===
+    // ===== 受伤 & 死亡 =====
     public void TakeDamage(int damage)
     {
         currentHealth -= damage;
-        if (currentHealth <= 0)
-        {
-            Die();
-        }
-    }
-
-    void Die()
-    {
-        Destroy(gameObject);
+        if (currentHealth <= 0) Destroy(gameObject);
     }
 
     void OnTriggerEnter2D(Collider2D other)
     {
         if (other.CompareTag("Player"))
-        {
-            PlayerController playerScript = other.GetComponent<PlayerController>();
-            if (playerScript != null)
-            {
-                playerScript.TakeDamage(damageToPlayer);
-            }
-        }
+            other.GetComponent<PlayerController>()?.TakeDamage(10);
     }
-
-
-
-    // 简易优先队列（Unity 2022+ 支持 System.Collections.Generic.PriorityQueue）
-    // 如果报错，可替换为 SortedSet 或使用第三方实现
 }
