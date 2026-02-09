@@ -2776,6 +2776,90 @@ TextureImporter:
       indices: 
       edges: []
       weights: []
+    - serializedVersion: 2
+      name: prairie_king_spritesheet_127
+      rect:
+        serializedVersion: 2
+        x: 335
+        y: 145
+        width: 16
+        height: 16
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 548b6110d38001b44abba9492757ec3f
+      internalID: 1062558458
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: prairie_king_spritesheet_128
+      rect:
+        serializedVersion: 2
+        x: 351
+        y: 145
+        width: 16
+        height: 16
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: f47d5cb3a25b3174aaf42c27b1445338
+      internalID: -153458392
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: prairie_king_spritesheet_129
+      rect:
+        serializedVersion: 2
+        x: 367
+        y: 145
+        width: 16
+        height: 16
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 69b3fcd819053e54ea92172725b63c9c
+      internalID: -1979263525
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: prairie_king_spritesheet_130
+      rect:
+        serializedVersion: 2
+        x: 383
+        y: 145
+        width: 16
+        height: 16
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 78a7bc2654233da4b92a79f90163bc09
+      internalID: -1310812183
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
     outline: []
     physicsShape: []
     bones: []
@@ -2819,7 +2903,11 @@ TextureImporter:
       prairie_king_spritesheet_124: 106885593
       prairie_king_spritesheet_125: 602014364
       prairie_king_spritesheet_126: -1330914551
+      prairie_king_spritesheet_127: 1062558458
+      prairie_king_spritesheet_128: -153458392
+      prairie_king_spritesheet_129: -1979263525
       prairie_king_spritesheet_13: 1740891118
+      prairie_king_spritesheet_130: -1310812183
       prairie_king_spritesheet_14: 1147395788
       prairie_king_spritesheet_15: -868797334
       prairie_king_spritesheet_16: 1790818428
