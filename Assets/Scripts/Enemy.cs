@@ -38,6 +38,13 @@ public class Enemy : MonoBehaviour
     public float deathFrameInterval = 0.1f;   // 每帧间隔（秒）
     public float finalFrameHoldTime = 1.0f;   // 最后一帧停留时间
 
+    // === 掉落金币 ===
+    public GameObject coin1Prefab; // 拖入 Coin_1 Prefab
+    public GameObject coin5Prefab; // 拖入 Coin_5 Prefab
+
+    public float dropChance = 1f;      // 30% 掉落概率
+    public float rareCoinChance = 0.1f;  // 掉落时，10% 是5金币
+
     // === 防卡死 ===
     private Vector2 lastPosition;
     private float stuckTime = 0f;
@@ -100,7 +107,7 @@ public class Enemy : MonoBehaviour
 
     void Update()
     {
-        if (player == null) return;
+        if (isDead || player == null) return;
 
         // 重置移动标记（关键！）
         isMovingThisFrame = false;
@@ -350,49 +357,77 @@ public class Enemy : MonoBehaviour
 
     void Die()
     {
-        if (isDead) return; // 防止重复调用
+        if (isDead) return;
         isDead = true;
-    
-        // 👇 关键修复：立即禁用碰撞体，防止尸体继续触发伤害
+
         Collider2D collider = GetComponent<Collider2D>();
         if (collider != null)
         {
             collider.enabled = false;
         }
-    
-        // 可选：也禁用子物体的碰撞体（如果有）
-        // foreach (Collider2D childCol in GetComponentsInChildren<Collider2D>())
-        //     childCol.enabled = false;
-    
-        enabled = false; // 停止所有 AI 行为
-    
-        StartCoroutine(PlayDeathAnimation());
+
+        // 启动带金币掉落的死亡动画
+        StartCoroutine(PlayDeathAnimationAndDropCoin());
     }
 
-    IEnumerator PlayDeathAnimation()
+    IEnumerator PlayDeathAnimationAndDropCoin()
     {
-        // 安全检查：确保有死亡帧
-        if (deathFrames == null || deathFrames.Length == 0)
+        // === 情况1：有死亡帧 ===
+        if (deathFrames != null && deathFrames.Length > 0)
         {
+            // 播放前 N-1 帧
+            for (int i = 0; i < deathFrames.Length - 1; i++)
+            {
+                spriteRenderer.sprite = deathFrames[i];
+                yield return new WaitForSeconds(deathFrameInterval);
+            }
+
+            // 显示最后一帧
+            spriteRenderer.sprite = deathFrames[deathFrames.Length - 1];
+
+            // 👇 关键：立即掉落金币（就在最后一帧显示时！）
+            TryDropCoin();
+
+            // 继续停留 finalFrameHoldTime 秒（尸体+金币共存）
             yield return new WaitForSeconds(finalFrameHoldTime);
-            Destroy(gameObject);
-            yield break;
         }
-
-        // 播放前 N-1 帧
-        for (int i = 0; i < deathFrames.Length - 1; i++)
+        // === 情况2：无死亡帧（兜底）===
+        else
         {
-            spriteRenderer.sprite = deathFrames[i];
-            yield return new WaitForSeconds(deathFrameInterval);
+            // 立即掉金币，短暂停留后销毁
+            TryDropCoin();
+            yield return new WaitForSeconds(finalFrameHoldTime);
         }
 
-        // 播放最后一帧
-        spriteRenderer.sprite = deathFrames[deathFrames.Length - 1];
-        yield return new WaitForSeconds(finalFrameHoldTime);
-
-        // 动画结束，销毁对象
+        // 销毁敌人本体
         Destroy(gameObject);
     }
+
+    /// <summary>
+    /// 尝试在当前位置掉落金币（1 或 5）
+    /// </summary>
+    void TryDropCoin()
+    {
+        if (Random.value >= dropChance)
+            return; // 未触发掉落
+
+        GameObject coinToDrop = (Random.value < rareCoinChance) ? coin5Prefab : coin1Prefab;
+
+        if (coinToDrop != null)
+        {
+            // 可选：稍微抬高一点，避免卡在地面
+            Vector3 dropPosition = transform.position;
+            Instantiate(coinToDrop, dropPosition, Quaternion.identity);
+
+            // 调试日志（可注释）
+            Debug.Log($"✅ {name} 掉落了 {coinToDrop.name}");
+        }
+        else
+        {
+            Debug.LogWarning("[Enemy] 金币 Prefab 未赋值！请检查 Inspector。", this);
+        }
+    }
+
     void OnTriggerEnter2D(Collider2D other)
     {
         if (other.CompareTag("Player"))

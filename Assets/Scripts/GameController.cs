@@ -14,6 +14,13 @@ public class GameController : MonoBehaviour
     private float currentTime;
     private bool isLevelTimerActive = false;
 
+    [Header("金币系统")]
+    private static int totalCoins = 0;
+    public static int TotalCoins => totalCoins;
+
+    // ===== 新增：金币变更事件 =====
+    public static System.Action OnCoinsChanged;
+
     // ===== 新增：倒计时事件 =====
     public static System.Action<float, float> OnLevelTimeUpdated;   // (当前时间, 总时间)
     public static System.Action OnLevelTimeFinished;               // 倒计时结束
@@ -66,6 +73,15 @@ public class GameController : MonoBehaviour
             isLevelTimerActive = true;
             StartCoroutine(LevelCountdown());
         }
+    }
+
+    /// <summary>
+    /// 增加金币（由 CoinPickup 调用）
+    /// </summary>
+    public static void AddCoins(int amount)
+    {
+        totalCoins += amount;
+        OnCoinsChanged?.Invoke();
     }
 
     IEnumerator LevelCountdown()
