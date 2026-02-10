@@ -145,17 +145,22 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   maxHealth: 50
-  damageToPlayer: 10
   moveSpeed: 2
-  updatePathInterval: 0.5
-  walkLeft: {fileID: 331400875, guid: 1b82ee0dd0639a748ad94ef20f61aaa6, type: 3}
-  walkRight: {fileID: 2084502580, guid: 1b82ee0dd0639a748ad94ef20f61aaa6, type: 3}
-  walkCycleTime: 0.3
+  pathUpdateInterval: 1
   obstacleLayer:
     serializedVersion: 2
     m_Bits: 64
-  gridSize: {x: 17, y: 17}
-  cellSize: 1
+  walkLeft: {fileID: 331400875, guid: 1b82ee0dd0639a748ad94ef20f61aaa6, type: 3}
+  walkRight: {fileID: 2084502580, guid: 1b82ee0dd0639a748ad94ef20f61aaa6, type: 3}
+  deathFrames:
+  - {fileID: -1989855200, guid: 1b82ee0dd0639a748ad94ef20f61aaa6, type: 3}
+  - {fileID: -1372684459, guid: 1b82ee0dd0639a748ad94ef20f61aaa6, type: 3}
+  - {fileID: -2001019541, guid: 1b82ee0dd0639a748ad94ef20f61aaa6, type: 3}
+  - {fileID: -1990999762, guid: 1b82ee0dd0639a748ad94ef20f61aaa6, type: 3}
+  - {fileID: 1828412534, guid: 1b82ee0dd0639a748ad94ef20f61aaa6, type: 3}
+  - {fileID: 542033889, guid: 1b82ee0dd0639a748ad94ef20f61aaa6, type: 3}
+  deathFrameInterval: 0.1
+  finalFrameHoldTime: 5
 --- !u!50 &-6926344824489527892
 Rigidbody2D:
   serializedVersion: 4

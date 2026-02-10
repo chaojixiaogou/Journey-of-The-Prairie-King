@@ -15,10 +15,14 @@ public class EnemySpawner : MonoBehaviour
     private List<Vector3> spawnPoints = new List<Vector3>();
     private int spawnedCount = 0;
 
+    [Header("运行时控制")]
+    private bool isPaused = false;
+    private Coroutine spawnCoroutine;
+
     void Start()
     {
         GenerateSpawnPoints();
-        StartCoroutine(SpawnLoop());
+        spawnCoroutine = StartCoroutine(SpawnLoop()); // 保存协程引用
     }
 
     void GenerateSpawnPoints()
@@ -51,6 +55,12 @@ public class EnemySpawner : MonoBehaviour
     {
         while (true)
         {
+            if (isPaused)
+            {
+                yield return null; // 暂停期间不退出协程，只等待
+                continue;
+            }
+
             if (enemyPrefab == null || spawnPoints.Count == 0)
                 yield break;
 
@@ -66,5 +76,15 @@ public class EnemySpawner : MonoBehaviour
 
             yield return new WaitForSeconds(spawnInterval);
         }
+    }
+
+    public void Pause()
+    {
+        isPaused = true;
+    }
+    
+    public void Resume()
+    {
+        isPaused = false;
     }
 }

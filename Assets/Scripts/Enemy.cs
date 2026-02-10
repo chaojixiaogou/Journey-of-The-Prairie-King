@@ -1,5 +1,6 @@
 using UnityEngine;
 using System.Collections.Generic;
+using System.Collections;
 
 [RequireComponent(typeof(Rigidbody2D))]
 public class Enemy : MonoBehaviour
@@ -31,6 +32,11 @@ public class Enemy : MonoBehaviour
 
     // === 方向缓存（用于移动，非动画）===
     private Vector2 lastMovementDirection = Vector2.right;
+
+    // === 死亡动画 ===
+    public Sprite[] deathFrames;        // 拖入6张图
+    public float deathFrameInterval = 0.1f;   // 每帧间隔（秒）
+    public float finalFrameHoldTime = 1.0f;   // 最后一帧停留时间
 
     // === 防卡死 ===
     private Vector2 lastPosition;
@@ -331,13 +337,65 @@ public class Enemy : MonoBehaviour
     // ===== 受伤 & 死亡 =====
     public void TakeDamage(int damage)
     {
+        if (isDead) return; // 防止重复死亡
+
         currentHealth -= damage;
-        if (currentHealth <= 0) Destroy(gameObject);
+        if (currentHealth <= 0)
+        {
+            Die();
+        }
     }
 
+    private bool isDead = false;
+
+    void Die()
+    {
+        if (isDead) return; // 防止重复调用
+        isDead = true;
+    
+        // 👇 关键修复：立即禁用碰撞体，防止尸体继续触发伤害
+        Collider2D collider = GetComponent<Collider2D>();
+        if (collider != null)
+        {
+            collider.enabled = false;
+        }
+    
+        // 可选：也禁用子物体的碰撞体（如果有）
+        // foreach (Collider2D childCol in GetComponentsInChildren<Collider2D>())
+        //     childCol.enabled = false;
+    
+        enabled = false; // 停止所有 AI 行为
+    
+        StartCoroutine(PlayDeathAnimation());
+    }
+
+    IEnumerator PlayDeathAnimation()
+    {
+        // 安全检查：确保有死亡帧
+        if (deathFrames == null || deathFrames.Length == 0)
+        {
+            yield return new WaitForSeconds(finalFrameHoldTime);
+            Destroy(gameObject);
+            yield break;
+        }
+
+        // 播放前 N-1 帧
+        for (int i = 0; i < deathFrames.Length - 1; i++)
+        {
+            spriteRenderer.sprite = deathFrames[i];
+            yield return new WaitForSeconds(deathFrameInterval);
+        }
+
+        // 播放最后一帧
+        spriteRenderer.sprite = deathFrames[deathFrames.Length - 1];
+        yield return new WaitForSeconds(finalFrameHoldTime);
+
+        // 动画结束，销毁对象
+        Destroy(gameObject);
+    }
     void OnTriggerEnter2D(Collider2D other)
     {
         if (other.CompareTag("Player"))
-            other.GetComponent<PlayerController>()?.TakeDamage(10);
+            other.GetComponent<PlayerController>()?.TakeDamage(1);
     }
 }
