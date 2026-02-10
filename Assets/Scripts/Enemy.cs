@@ -420,7 +420,7 @@ public class Enemy : MonoBehaviour
             Instantiate(coinToDrop, dropPosition, Quaternion.identity);
 
             // 调试日志（可注释）
-            Debug.Log($"✅ {name} 掉落了 {coinToDrop.name}");
+            // Debug.Log($"✅ {name} 掉落了 {coinToDrop.name}");
         }
         else
         {

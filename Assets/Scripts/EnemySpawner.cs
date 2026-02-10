@@ -2,13 +2,20 @@ using UnityEngine;
 using System.Collections.Generic;
 
 /// <summary>
-/// 适用于 16x16 地图，且原点 (0,0) 在地图中心的情况
-/// 敌人生成在四周边缘的 1-based 第7~10格（即每边中间4格）
+/// 支持多种敌人类型，按权重随机生成
 /// </summary>
+[System.Serializable]
+public class EnemySpawnOption
+{
+    public GameObject prefab;
+    [Range(0, 100)]
+    public int weight = 10; // 权重（总和建议 ≤ 100，但不强制）
+}
+
 public class EnemySpawner : MonoBehaviour
 {
-    [Header("敌人设置")]
-    public GameObject enemyPrefab;
+    [Header("敌人生成配置")]
+    public List<EnemySpawnOption> enemyTypes = new List<EnemySpawnOption>();
     public int totalEnemiesToSpawn = -1; // -1 = 无限生成
     public float spawnInterval = 2f;
 
@@ -22,31 +29,22 @@ public class EnemySpawner : MonoBehaviour
     void Start()
     {
         GenerateSpawnPoints();
-        spawnCoroutine = StartCoroutine(SpawnLoop()); // 保存协程引用
+        spawnCoroutine = StartCoroutine(SpawnLoop());
     }
 
     void GenerateSpawnPoints()
     {
         spawnPoints.Clear();
-
-        // 中间四格对应的偏移量（相对于边中心）
-        int[] offsets = { -2, -1, 0, 1 }; // 这就是 1-based 第7~10格在中心坐标系下的值
+        int[] offsets = { -2, -1, 0, 1 };
 
         // 上边 (y = +7)
-        foreach (int x in offsets)
-            spawnPoints.Add(new Vector3(x, 7, 0));
-
+        foreach (int x in offsets) spawnPoints.Add(new Vector3(x, 7, 0));
         // 下边 (y = -8)
-        foreach (int x in offsets)
-            spawnPoints.Add(new Vector3(x, -8, 0));
-
+        foreach (int x in offsets) spawnPoints.Add(new Vector3(x, -8, 0));
         // 左边 (x = -8)
-        foreach (int y in offsets)
-            spawnPoints.Add(new Vector3(-8, y, 0));
-
+        foreach (int y in offsets) spawnPoints.Add(new Vector3(-8, y, 0));
         // 右边 (x = +7)
-        foreach (int y in offsets)
-            spawnPoints.Add(new Vector3(7, y, 0));
+        foreach (int y in offsets) spawnPoints.Add(new Vector3(7, y, 0));
 
         Debug.Log($"[EnemySpawner] 已生成 {spawnPoints.Count} 个中心对齐的生成点");
     }
@@ -57,12 +55,15 @@ public class EnemySpawner : MonoBehaviour
         {
             if (isPaused)
             {
-                yield return null; // 暂停期间不退出协程，只等待
+                yield return null;
                 continue;
             }
 
-            if (enemyPrefab == null || spawnPoints.Count == 0)
+            if (spawnPoints.Count == 0 || enemyTypes == null || enemyTypes.Count == 0)
+            {
+                Debug.LogError("[EnemySpawner] 未设置敌人 Prefab！");
                 yield break;
+            }
 
             if (totalEnemiesToSpawn > 0 && spawnedCount >= totalEnemiesToSpawn)
             {
@@ -70,21 +71,48 @@ public class EnemySpawner : MonoBehaviour
                 yield break;
             }
 
+            // === 按权重随机选择敌人类型 ===
+            GameObject selectedPrefab = SelectEnemyByWeight();
+            if (selectedPrefab == null)
+            {
+                yield return new WaitForSeconds(spawnInterval);
+                continue;
+            }
+
             Vector3 point = spawnPoints[Random.Range(0, spawnPoints.Count)];
-            Instantiate(enemyPrefab, point, Quaternion.identity);
+            Instantiate(selectedPrefab, point, Quaternion.identity);
             spawnedCount++;
 
             yield return new WaitForSeconds(spawnInterval);
         }
     }
 
-    public void Pause()
+    GameObject SelectEnemyByWeight()
     {
-        isPaused = true;
+        int totalWeight = 0;
+        foreach (var option in enemyTypes)
+        {
+            if (option.prefab != null)
+                totalWeight += option.weight;
+        }
+
+        if (totalWeight <= 0) return null;
+
+        int random = Random.Range(0, totalWeight);
+        int cumulative = 0;
+
+        foreach (var option in enemyTypes)
+        {
+            if (option.prefab == null) continue;
+            cumulative += option.weight;
+            if (random < cumulative)
+                return option.prefab;
+        }
+
+        // 兜底（理论上不会走到这里）
+        return enemyTypes[0].prefab;
     }
-    
-    public void Resume()
-    {
-        isPaused = false;
-    }
+
+    public void Pause() => isPaused = true;
+    public void Resume() => isPaused = false;
 }

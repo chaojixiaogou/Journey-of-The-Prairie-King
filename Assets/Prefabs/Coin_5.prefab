@@ -172,3 +172,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   coinValue: 5
+  totalLifetime: 10
+  blinkDuration: 2
+  blinkInterval: 0.2
