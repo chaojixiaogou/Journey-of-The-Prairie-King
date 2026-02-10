@@ -1,5 +1,7 @@
 using UnityEngine;
 using System.Collections;
+using UnityEngine.UI;
+using System.Collections.Generic;
 
 [RequireComponent(typeof(Rigidbody2D))]
 public class PlayerController : MonoBehaviour
@@ -33,6 +35,78 @@ public class PlayerController : MonoBehaviour
     private bool isInvincible = false;
     private Vector3 spawnPosition; // 重用这个变量，但改为屏幕中心
     private bool isDead = false;
+
+    // === 道具系统 ===
+    private PowerupType? heldPowerup = null; // 可空，表示未持有
+    public static System.Action<PowerupType?> OnPowerupChanged; // 用于 UI 更新
+
+    [Header("=== 道具UI ===")]
+    public Image heldPowerupIcon; // 拖入 UI Image 组件
+
+    // 拖入 8 个道具图标（按 PowerupType 枚举顺序）
+    public Sprite wheelSprite;
+    public Sprite machineGunSprite;
+    public Sprite nukeSprite;
+    public Sprite tombstoneSprite;
+    public Sprite coffeeSprite;
+    public Sprite shotgunSprite;
+    public Sprite smokeGrenadeSprite;
+    public Sprite badgeSprite;
+
+    // === 射击增强状态（由道具激活）===
+    private bool isWheelActive = false;
+    private float wheelEndTime = 0f;
+
+    private bool isShotgunActive = false;
+    private float shotgunEndTime = 0f;
+
+    private bool isMachineGunActive = false;
+    private float machineGunEndTime = 0f;
+
+    private const float POWERUP_DURATION = 12f; // 所有道具持续时间
+
+    // === 咖啡（移动加速）===
+    private bool isCoffeeActive = false;
+    private float coffeeEndTime = 0f;
+
+    private const float COFFEE_DURATION = 16f; // 咖啡持续时间
+    private const float COFFEE_SPEED_MULTIPLIER = 1.5f; // 移动速度倍率
+
+    // === 警徽（Badge）===
+    private bool isBadgeActive = false;
+    private float badgeEndTime = 0f;
+
+    private const float BADGE_DURATION = 24f; // 警徽持续时间
+
+    // 当前是否有机枪效果（来自机枪 or 警徽）
+    private bool IsMachineGunActiveNow => isMachineGunActive || isBadgeActive;
+
+    // 当前是否有霰弹效果（来自霰弹 or 警徽）
+    private bool IsShotgunActiveNow => isShotgunActive || isBadgeActive;
+
+    // 当前是否有咖啡效果（来自咖啡 or 警徽）
+    private bool IsCoffeeActiveNow => isCoffeeActive || isBadgeActive;
+
+    // === 核弹死亡动画素材 ===
+    [Header("核弹死亡动画")]
+    public Sprite[] nukeDeathSprites; // 拖入5张Sprite（按顺序）
+    public float nukeDeathFrameDuration = 0.08f; // 每帧持续时间（秒）
+    public string nukeEffectSortingLayer = "Default"; // 可选：设置 Sorting Layer（如 "Effects"）
+
+    // === 烟雾弹（Smoke Grenade）===
+    private bool isSmokeActive = false;
+    private float smokeEndTime = 0f;
+    private const float SMOKE_DURATION = 4f;
+
+    // === 烟雾弹残留动画 ===
+    [Header("烟雾弹残留动画")]
+    public Sprite[] smokeGrenadeResidueSprites; // 拖入你的5张Sprite（按顺序）
+    public float smokeResidueFrameDuration = 0.1f; // 每帧持续时间（秒）
+    public string smokeEffectSortingLayer = "Effects"; // 可选：设置 Sorting Layer
+
+    // === 射击缓存（避免频繁 GC）===
+    private List<Vector2> tempMainDirections = new List<Vector2>(8);   // 最多8个主方向
+    private List<Vector2> tempFinalDirections = new List<Vector2>(24); // 最多24发（8×3）
 
     // ===== 事件系统 =====
     public static System.Action OnLivesChanged; // 生命值变化时触发
@@ -93,6 +167,9 @@ public class PlayerController : MonoBehaviour
 
         // 初始化死亡动画专用渲染器
         SetupDeathEffectRenderer();
+
+        // 初始化道具UI
+        UpdateHeldPowerupUI();
     }
 
     void Update()
@@ -104,6 +181,14 @@ public class PlayerController : MonoBehaviour
             if (spriteRenderer != null) spriteRenderer.enabled = false;
             return;
         }
+
+        // ===== 自动过期道具效果 =====
+        float now = Time.time;
+        if (isWheelActive && now >= wheelEndTime) isWheelActive = false;
+        if (isShotgunActive && now >= shotgunEndTime) isShotgunActive = false;
+        if (isMachineGunActive && now >= machineGunEndTime) isMachineGunActive = false;
+        if (isCoffeeActive && now >= coffeeEndTime) isCoffeeActive = false;
+        if (isBadgeActive && now >= badgeEndTime) isBadgeActive = false;
 
         // 原有的无敌闪烁逻辑（仅在非动画期间生效）
         if (isInvincible)
@@ -126,11 +211,8 @@ public class PlayerController : MonoBehaviour
             shootDirection = shootInput.normalized;
             UpdatePlayerSprite();
 
-            if (Time.time >= lastFireTime + fireRate)
-            {
-                Shoot();
-                lastFireTime = Time.time;
-            }
+            // ✅ 不再在这里判断射速！直接调用 Shoot()
+            Shoot(); // 让 Shoot 自己决定是否真的发射
         }
 
         // ===== 处理移动输入（WASD）=====
@@ -144,13 +226,26 @@ public class PlayerController : MonoBehaviour
 
         // 移动在 FixedUpdate 中处理，但输入在 Update 采集
         MoveCharacter(moveInput);
+
+        // ===== 处理道具使用（空格键）=====
+        if (Input.GetKeyDown(KeyCode.Space) && heldPowerup.HasValue)
+        {
+            UseHeldPowerup();
+        }
     }
 
     void MoveCharacter(Vector2 direction)
     {
         if (direction == Vector2.zero) return;
 
-        Vector2 newPosition = (Vector2)transform.position + direction * moveSpeed * Time.deltaTime;
+        // ✅ 计算当前有效移动速度
+        float effectiveMoveSpeed = moveSpeed;
+        if (IsCoffeeActiveNow)
+        {
+            effectiveMoveSpeed *= COFFEE_SPEED_MULTIPLIER;
+        }
+
+        Vector2 newPosition = (Vector2)transform.position + direction * effectiveMoveSpeed * Time.deltaTime;
 
         if (!IsPositionBlocked(newPosition))
         {
@@ -158,7 +253,6 @@ public class PlayerController : MonoBehaviour
         }
         else
         {
-            // 尝试滑墙（优先保持一个轴的移动）
             TrySlide(direction, newPosition);
         }
     }
@@ -207,20 +301,81 @@ public class PlayerController : MonoBehaviour
 
     void Shoot()
     {
-        if (bulletPrefab != null && firePoint != null)
+        if (bulletPrefab == null || firePoint == null)
+            return;
+
+        // ===== 计算有效射速 =====
+        float speedMultiplier = 1.0f;
+        if (IsMachineGunActiveNow) speedMultiplier *= 4f;
+        if (IsShotgunActiveNow) speedMultiplier *= (2f / 3f);
+
+        float effectiveFireRate = fireRate / speedMultiplier;
+        if (Time.time < lastFireTime + effectiveFireRate)
+            return;
+
+        lastFireTime = Time.time;
+
+        // ===== 清空并复用列表 =====
+        tempMainDirections.Clear();
+        tempFinalDirections.Clear();
+
+        // ===== 确定主射击方向 =====
+        if (isWheelActive)
+        {
+            // 固定 8 个方向（上下左右 + 四个对角线）
+            tempMainDirections.Add(Vector2.up);
+            tempMainDirections.Add(Vector2.down);
+            tempMainDirections.Add(Vector2.left);
+            tempMainDirections.Add(Vector2.right);
+            tempMainDirections.Add(new Vector2(1, 1).normalized);
+            tempMainDirections.Add(new Vector2(1, -1).normalized);
+            tempMainDirections.Add(new Vector2(-1, 1).normalized);
+            tempMainDirections.Add(new Vector2(-1, -1).normalized);
+        }
+        else
+        {
+            // 使用玩家当前输入方向
+            tempMainDirections.Add(shootDirection);
+        }
+
+        // ===== 对每个主方向应用霰弹散射（如激活）=====
+        foreach (Vector2 mainDir in tempMainDirections)
+        {
+            if (IsShotgunActiveNow)
+            {
+                float baseAngle = Mathf.Atan2(mainDir.y, mainDir.x) * Mathf.Rad2Deg;
+                tempFinalDirections.Add(DirFromAngle(baseAngle - 15f)); // 左偏
+                tempFinalDirections.Add(mainDir);                       // 中心
+                tempFinalDirections.Add(DirFromAngle(baseAngle + 15f)); // 右偏
+            }
+            else
+            {
+                tempFinalDirections.Add(mainDir);
+            }
+        }
+
+        // ===== 实例化所有子弹 =====
+        foreach (Vector2 dir in tempFinalDirections)
         {
             GameObject bullet = Instantiate(bulletPrefab, firePoint.position, Quaternion.identity);
             Bullet bulletComp = bullet.GetComponent<Bullet>();
             if (bulletComp != null)
             {
-                bulletComp.SetDirection(shootDirection);
+                bulletComp.SetDirection(dir);
             }
         }
     }
 
+    // 辅助方法：角度转单位方向向量
+    Vector2 DirFromAngle(float angleDegrees)
+    {
+        float rad = angleDegrees * Mathf.Deg2Rad;
+        return new Vector2(Mathf.Cos(rad), Mathf.Sin(rad));
+    }
+
     public void TakeDamage(int damage = 1)
     {
-        if (isDead || isPlayingDeathAnim) return;
+        if (isDead || isPlayingDeathAnim || isInvincible) return;
 
         currentLives -= damage;
 
@@ -321,7 +476,60 @@ public class PlayerController : MonoBehaviour
         }
     }
 
-    
+    void UseHeldPowerup()
+    {
+        if (!heldPowerup.HasValue) return;
+
+        PowerupType type = heldPowerup.Value;
+        float now = Time.time;
+        Debug.Log($"✨ 使用道具: {type}");
+
+        switch (type)
+        {
+            case PowerupType.Wheel:
+                isWheelActive = true;
+                wheelEndTime = now + POWERUP_DURATION;
+                break;
+
+            case PowerupType.MachineGun:
+                isMachineGunActive = true;
+                machineGunEndTime = now + POWERUP_DURATION;
+                break;
+
+            case PowerupType.Shotgun:
+                isShotgunActive = true;
+                shotgunEndTime = now + POWERUP_DURATION;
+                break;
+
+            case PowerupType.Coffee:
+                isCoffeeActive = true;
+                coffeeEndTime = now + COFFEE_DURATION;
+                break;
+
+            case PowerupType.Badge:
+                isBadgeActive = true;
+                badgeEndTime = now + BADGE_DURATION;
+                Debug.Log("🎖️ 警徽激活！");
+                break;
+            case PowerupType.Nuke:
+                UseNuke();
+                break;
+            
+            case PowerupType.SmokeGrenade:
+                UseSmokeGrenade();
+                break;
+
+            // 其他道具暂不处理
+            default:
+                Debug.LogWarning($"道具 {type} 的效果尚未实现");
+                break;
+        }
+
+        // 清空持有状态
+        heldPowerup = null;
+        UpdateHeldPowerupUI();
+        OnPowerupChanged?.Invoke(heldPowerup);
+    }
 
     IEnumerator StartInvincibility()
     {
@@ -401,6 +609,225 @@ public class PlayerController : MonoBehaviour
         OnLivesChanged?.Invoke();
     }
 
+    /// <summary>
+    /// 玩家拾取一个道具（会顶替当前持有的）
+    /// </summary>
+    public void PickUpPowerup(PowerupType type)
+    {
+        heldPowerup = type;
+        Debug.Log($"📦 拾取道具: {type}");
+        UpdateHeldPowerupUI(); // 👈 新增
+        OnPowerupChanged?.Invoke(heldPowerup);
+    }
+
+    Sprite GetSpriteForPowerup(PowerupType type)
+    {
+        switch (type)
+        {
+            case PowerupType.Wheel: return wheelSprite;
+            case PowerupType.MachineGun: return machineGunSprite;
+            case PowerupType.Nuke: return nukeSprite;
+            case PowerupType.Tombstone: return tombstoneSprite;
+            case PowerupType.Coffee: return coffeeSprite;
+            case PowerupType.Shotgun: return shotgunSprite;
+            case PowerupType.SmokeGrenade: return smokeGrenadeSprite;
+            case PowerupType.Badge: return badgeSprite;
+            default: return null;
+        }
+    }
+
+    void UpdateHeldPowerupUI()
+    {
+        if (heldPowerupIcon == null) return;
+
+        if (heldPowerup.HasValue)
+        {
+            Sprite icon = GetSpriteForPowerup(heldPowerup.Value);
+            heldPowerupIcon.sprite = icon;
+            heldPowerupIcon.enabled = (icon != null); // 如果没配图就隐藏
+        }
+        else
+        {
+            heldPowerupIcon.enabled = false; // 无道具时隐藏
+        }
+    }
+
+    void UseNuke()
+    {
+        Debug.Log("💣 核弹启动！全屏清敌（无掉落）");
+
+        Enemy[] enemies = FindObjectsOfType<Enemy>();
+        foreach (Enemy enemy in enemies)
+        {
+            // 检查是否已被销毁（安全）
+            if (enemy == null) continue;
+
+            // 播放自定义死亡动画
+            StartCoroutine(PlayNukeDeathAnimationAt(enemy.transform.position));
+
+            // 直接销毁，不调用 Die() → 不掉 loot，不播原特效
+            Destroy(enemy.gameObject);
+        }
+    }
+
+    /// <summary>
+    /// 在指定位置播放核弹死亡动画（5帧序列）
+    /// </summary>
+    private System.Collections.IEnumerator PlayNukeDeathAnimationAt(Vector3 position)
+    {
+        // 安全检查
+        if (nukeDeathSprites == null || nukeDeathSprites.Length == 0)
+        {
+            yield break;
+        }
+
+        // 创建临时游戏对象
+        GameObject animObj = new GameObject("NukeDeathAnim");
+        animObj.transform.position = position;
+
+        // 添加 SpriteRenderer
+        SpriteRenderer sr = animObj.AddComponent<SpriteRenderer>();
+        sr.sortingLayerName = nukeEffectSortingLayer; // 可选：确保层级正确
+        sr.sortingOrder = 10; // 确保在角色/敌人上方
+
+        // 播放每一帧
+        foreach (Sprite sprite in nukeDeathSprites)
+        {
+            sr.sprite = sprite;
+            yield return new WaitForSeconds(nukeDeathFrameDuration);
+        }
+
+        // 动画结束，销毁对象
+        Destroy(animObj);
+    }
+
+    void UseSmokeGrenade()
+    {
+        Debug.Log("💨 使用烟雾弹！");
+
+        // ===== 1. 记录当前（原）位置 =====
+        Vector3 originalPosition = transform.position;
+
+        // ===== 2. 随机传送 =====
+        Vector3? newPos = FindRandomValidPosition(maxAttempts: 20);
+        if (newPos.HasValue)
+        {
+            transform.position = newPos.Value;
+            Debug.Log($"✅ 传送到: {newPos.Value}");
+        }
+        else
+        {
+            Debug.LogWarning("⚠️ 未能找到有效传送点，留在原地");
+        }
+
+        // ===== 3. 在原位置播放残留动画 =====
+        if (smokeGrenadeResidueSprites != null && smokeGrenadeResidueSprites.Length > 0)
+        {
+            StartCoroutine(PlaySmokeResidueAnimation(originalPosition));
+        }
+
+        // ===== 4. 暂停所有敌人 =====
+        Enemy[] enemies = FindObjectsOfType<Enemy>();
+        foreach (Enemy enemy in enemies)
+        {
+            if (enemy != null && !enemy.IsDead)
+            {
+                enemy.Pause();
+            }
+        }
+
+        // ===== 5. 激活烟雾效果（无敌+闪烁）=====
+        isSmokeActive = true;
+        smokeEndTime = Time.time + SMOKE_DURATION;
+        StartCoroutine(SmokeEffectCoroutine());
+    }
+
+    /// <summary>
+    /// 寻找地图内一个随机且非障碍物的位置
+    /// </summary>
+    Vector3? FindRandomValidPosition(int maxAttempts = 10)
+    {
+        Camera cam = Camera.main;
+        if (cam == null) return null;
+
+        // 获取屏幕世界坐标边界（假设 Orthographic 相机）
+        float screenLeft = cam.ViewportToWorldPoint(Vector3.zero).x/24*14;
+        float screenRight = cam.ViewportToWorldPoint(Vector3.right).x/24*14;
+        float screenBottom = cam.ViewportToWorldPoint(Vector3.zero).y/24*14;
+        float screenTop = cam.ViewportToWorldPoint(Vector3.up).y/24*14;
+
+        for (int i = 0; i < maxAttempts; i++)
+        {
+            float x = Random.Range(screenLeft + 1f, screenRight - 1f);
+            float y = Random.Range(screenBottom + 1f, screenTop - 1f);
+            Vector2 pos = new Vector2(x, y);
+
+            // 检查是否被障碍物阻挡
+            if (!IsPositionBlocked(pos))
+            {
+                return new Vector3(x, y, transform.position.z);
+            }
+        }
+
+        return null; // 未找到
+    }
+
+    /// <summary>
+    /// 在指定位置播放烟雾弹残留动画（5帧序列）
+    /// </summary>
+    private IEnumerator PlaySmokeResidueAnimation(Vector3 position)
+    {
+        if (smokeGrenadeResidueSprites == null || smokeGrenadeResidueSprites.Length == 0)
+            yield break;
+
+        // 创建临时游戏对象
+        GameObject animObj = new GameObject("SmokeGrenadeResidue");
+        animObj.transform.position = position;
+
+        SpriteRenderer sr = animObj.AddComponent<SpriteRenderer>();
+        sr.sortingLayerName = smokeEffectSortingLayer;
+        sr.sortingOrder = 5; // 确保在地面之上，玩家之下（可调）
+
+        // 播放每一帧
+        foreach (Sprite sprite in smokeGrenadeResidueSprites)
+        {
+            sr.sprite = sprite;
+            yield return new WaitForSeconds(smokeResidueFrameDuration);
+        }
+
+        // 动画结束，销毁对象
+        Destroy(animObj);
+    }
+
+    IEnumerator SmokeEffectCoroutine()
+    {
+        bool wasInvincible = isInvincible;
+        isInvincible = true;
+    
+        yield return new WaitForSeconds(SMOKE_DURATION);
+    
+        // ===== 恢复状态 =====
+        isInvincible = wasInvincible;
+        isSmokeActive = false;
+    
+        // ✅ 关键修复：如果不再无敌，确保 Sprite 显示
+        if (!isInvincible && spriteRenderer != null)
+        {
+            spriteRenderer.enabled = true;
+        }
+    
+        // 恢复敌人
+        Enemy[] enemies = FindObjectsOfType<Enemy>();
+        foreach (Enemy enemy in enemies)
+        {
+            if (enemy != null)
+            {
+                enemy.Resume();
+            }
+        }
+    
+        Debug.Log("💨 烟雾效果结束");
+    }
     IEnumerator PlayGameOverAnimation()
     {
         isDead = true; // 标记永久死亡

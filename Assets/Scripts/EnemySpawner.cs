@@ -38,13 +38,13 @@ public class EnemySpawner : MonoBehaviour
         int[] offsets = { -2, -1, 0, 1 };
 
         // 上边 (y = +7)
-        foreach (int x in offsets) spawnPoints.Add(new Vector3(x, 7, 0));
+        foreach (int x in offsets) spawnPoints.Add(new Vector3(x, 7.3f, 0));
         // 下边 (y = -8)
-        foreach (int x in offsets) spawnPoints.Add(new Vector3(x, -8, 0));
+        foreach (int x in offsets) spawnPoints.Add(new Vector3(x, -7.7f, 0));
         // 左边 (x = -8)
-        foreach (int y in offsets) spawnPoints.Add(new Vector3(-8, y, 0));
+        foreach (int y in offsets) spawnPoints.Add(new Vector3(-7.7f, y, 0));
         // 右边 (x = +7)
-        foreach (int y in offsets) spawnPoints.Add(new Vector3(7, y, 0));
+        foreach (int y in offsets) spawnPoints.Add(new Vector3(7.3f, y, 0));
 
         Debug.Log($"[EnemySpawner] 已生成 {spawnPoints.Count} 个中心对齐的生成点");
     }

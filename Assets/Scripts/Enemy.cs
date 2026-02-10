@@ -59,6 +59,12 @@ public class Enemy : MonoBehaviour
     [Tooltip("当掉落金币时，有此概率是5金币")]
     public float rareCoinChance = 0.1f;
 
+    // === 新增：8种道具 Prefab ===
+    public GameObject[] powerupPrefabs; // 按 PowerupType 顺序排列！
+
+    [Header("=== 道具掉落权重 ===")]
+    public int[] powerupWeights; // 与 powerupPrefabs 一一对应
+
     // === 防卡死 ===
     private Vector2 lastPosition;
     private float stuckTime = 0f;
@@ -68,6 +74,19 @@ public class Enemy : MonoBehaviour
     private bool isOnLeftFoot = true;
     private const float WALK_ANIM_INTERVAL = 0.25f; // 每0.25秒切换一次脚
     private bool isMovingThisFrame = false;
+
+    private bool isPaused = false;
+    public bool IsPaused => isPaused;
+
+    public void Pause()
+    {
+        isPaused = true;
+    }
+
+    public void Resume()
+    {
+        isPaused = false;
+    }
 
     void Start()
     {
@@ -121,7 +140,7 @@ public class Enemy : MonoBehaviour
 
     void Update()
     {
-        if (isDead || player == null) return;
+        if (isPaused || isDead || player == null) return;
 
         // 重置移动标记（关键！）
         isMovingThisFrame = false;
@@ -409,6 +428,9 @@ public class Enemy : MonoBehaviour
 
     private bool isDead = false;
 
+    // 提供只读访问
+    public bool IsDead => isDead;
+
     void Die()
     {
         if (isDead) return;
@@ -462,35 +484,58 @@ public class Enemy : MonoBehaviour
     /// </summary>
     void TryDropLoot()
     {
-        // 第一步：是否掉落任何道具？
         if (Random.value >= totalDropChance)
-            return; // 不掉落
+            return;
 
-        // 第二步：计算总权重
+        // 计算总权重：金币 + 心 + 所有道具
         int totalWeight = coinWeight + heartWeight;
+
+        // 累加道具权重
+        if (powerupWeights != null)
+        {
+            foreach (int w in powerupWeights)
+                totalWeight += w;
+        }
+
         if (totalWeight <= 0) return;
 
-        // 第三步：随机选择类型
         int roll = Random.Range(0, totalWeight);
 
+        // 区间1: 金币
         if (roll < coinWeight)
         {
-            // 掉落金币
-            GameObject coinToDrop = (Random.value < rareCoinChance) ? coin5Prefab : coin1Prefab;
-            if (coinToDrop != null)
-            {
-                Instantiate(coinToDrop, transform.position, Quaternion.identity);
-                Debug.Log($"✅ {name} 掉落了 {coinToDrop.name}");
-            }
+            GameObject coin = (Random.value < rareCoinChance) ? coin5Prefab : coin1Prefab;
+            InstantiateSafe(coin);
         }
+        // 区间2: 心
+        else if (roll < coinWeight + heartWeight)
+        {
+            InstantiateSafe(heartPrefab);
+        }
+        // 区间3: 道具
         else
         {
-            // 掉落生命道具
-            if (heartPrefab != null)
+            int remaining = roll - coinWeight - heartWeight;
+            int cumulative = 0;
+
+            for (int i = 0; i < powerupWeights?.Length; i++)
             {
-                Instantiate(heartPrefab, transform.position, Quaternion.identity);
-                Debug.Log($"❤️ {name} 掉落了生命道具");
+                cumulative += powerupWeights[i];
+                if (remaining < cumulative && i < powerupPrefabs?.Length)
+                {
+                    InstantiateSafe(powerupPrefabs[i]);
+                    break;
+                }
             }
+        }
+    }
+
+    // 安全实例化辅助方法
+    void InstantiateSafe(GameObject prefab)
+    {
+        if (prefab != null)
+        {
+            Instantiate(prefab, transform.position, Quaternion.identity);
         }
     }
 

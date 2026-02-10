@@ -170,6 +170,16 @@ MonoBehaviour:
   coinWeight: 70
   heartWeight: 30
   rareCoinChance: 0.1
+  powerupPrefabs:
+  - {fileID: 6155797925736656448, guid: b2218c89c4eeda24d89b85d094214903, type: 3}
+  - {fileID: 6155797925736656448, guid: e65f24a5682dcc14f8d8def032c1e7dd, type: 3}
+  - {fileID: 6155797925736656448, guid: a4f2ba2e2777a0047afd8f1b1ee3f060, type: 3}
+  - {fileID: 6155797925736656448, guid: 80dba86a7662f1e4daea4ce9ad397bb3, type: 3}
+  - {fileID: 6155797925736656448, guid: 4b51c8b165003a44d9c103e6272be267, type: 3}
+  - {fileID: 6155797925736656448, guid: 0c29678ecba81eb499be25e9e2308bfd, type: 3}
+  - {fileID: 6155797925736656448, guid: b203469c2dd453642b11be6c1dfc5ab7, type: 3}
+  - {fileID: 6155797925736656448, guid: 8d317ef5e11815b4c99c24086b97fca1, type: 3}
+  powerupWeights: 0500000005000000050000000500000005000000050000002c01000002000000
 --- !u!50 &-6926344824489527892
 Rigidbody2D:
   serializedVersion: 4
