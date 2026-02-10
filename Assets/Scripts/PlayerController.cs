@@ -148,6 +148,25 @@ public class PlayerController : MonoBehaviour
     private SpriteRenderer spriteRenderer;
     private Vector2 shootDirection = Vector2.right; // 默认朝右
 
+    // ===== 音效 =====
+    public AudioClip shootSound;      // 拖入 Inspector 的射击音效
+    [Range(0f, 1f)]
+    public float shootVolume = 0.7f;  // 音量（可选）
+    
+    private AudioSource audioSource;
+
+    // ===== 拾取音效 =====
+    public AudioClip pickupCollectibleSound; // 金币、生命
+    public AudioClip pickupPowerupSound;     // 道具（Wheel, MachineGun 等）
+    [Range(0f, 1f)]
+    public float pickupVolume = 0.7f;
+
+    // ===== 使用道具音效 =====
+    public AudioClip useGraveSound;      // 墓碑
+    public AudioClip useSmokeBombSound;  // 烟雾弹
+    [Range(0f, 1f)]
+    public float usePowerupVolume = 0.8f;
+
     
 
     void Start()
@@ -188,6 +207,11 @@ public class PlayerController : MonoBehaviour
 
         // 初始化道具UI
         UpdateHeldPowerupUI();
+
+        // ===== 初始化音效 =====
+        audioSource = gameObject.AddComponent<AudioSource>();
+        audioSource.playOnAwake = false;
+        audioSource.spatialBlend = 0f; // 2D 音效
     }
 
     void Update()
@@ -365,6 +389,12 @@ public class PlayerController : MonoBehaviour
 
         lastFireTime = Time.time;
 
+        // 🔊 播放射击音效（✅ 放在这里！确保只在真正发射时播放）
+        if (shootSound != null && audioSource != null)
+        {
+            audioSource.PlayOneShot(shootSound, shootVolume);
+        }
+
         // ===== 清空并复用列表 =====
         tempMainDirections.Clear();
         tempFinalDirections.Clear();
@@ -426,10 +456,10 @@ public class PlayerController : MonoBehaviour
     public void TakeDamage(int damage = 1)
     {
         if (isDead || isPlayingDeathAnim || isInvincible) return;
-    
+
         currentLives -= damage;
         OnLivesChanged?.Invoke();
-    
+
         if (currentLives <= 0)
         {
             StartCoroutine(PlayGameOverAnimation());
@@ -441,7 +471,7 @@ public class PlayerController : MonoBehaviour
             {
                 GameController.Instance.AddTime(20f);
             }
-    
+
             StartCoroutine(PlayDeathAnimationThenTriggerRespawn());
         }
     }
@@ -570,10 +600,12 @@ public class PlayerController : MonoBehaviour
                 break;
             
             case PowerupType.SmokeGrenade:
+                PlayUsePowerupSound(type);
                 UseSmokeGrenade();
                 break;
 
             case PowerupType.Tombstone:
+                PlayUsePowerupSound(type);
                 UseTombstone();
                 break;
 
@@ -587,6 +619,29 @@ public class PlayerController : MonoBehaviour
         heldPowerup = null;
         UpdateHeldPowerupUI();
         OnPowerupChanged?.Invoke(heldPowerup);
+    }
+
+    private void PlayUsePowerupSound(PowerupType type)
+    {
+        if (audioSource == null) return;
+
+        AudioClip clipToPlay = null;
+
+        switch (type)
+        {
+            case PowerupType.Tombstone:
+                clipToPlay = useGraveSound;
+                break;
+            case PowerupType.SmokeGrenade:
+                clipToPlay = useSmokeBombSound;
+                break;
+            // 可以在这里加更多道具的使用音效
+        }
+
+        if (clipToPlay != null)
+        {
+            audioSource.PlayOneShot(clipToPlay, usePowerupVolume);
+        }
     }
 
     IEnumerator StartInvincibility()
@@ -674,6 +729,13 @@ public class PlayerController : MonoBehaviour
     {
         heldPowerup = type;
         Debug.Log($"📦 拾取道具: {type}");
+
+        // 🔊 播放道具拾取音效
+        if (audioSource != null && pickupPowerupSound != null)
+        {
+            audioSource.PlayOneShot(pickupPowerupSound, pickupVolume);
+        }
+
         UpdateHeldPowerupUI(); // 👈 新增
         OnPowerupChanged?.Invoke(heldPowerup);
     }
@@ -720,8 +782,13 @@ public class PlayerController : MonoBehaviour
             // 检查是否已被销毁（安全）
             if (enemy == null) continue;
 
+            // 🔊 播放该敌人的随机死亡音效
+            if(!enemy.IsDead)
+                enemy.PlayRandomDeathSound();
+
             // 播放自定义死亡动画
-            StartCoroutine(PlayNukeDeathAnimationAt(enemy.transform.position));
+            if(!enemy.IsDead)
+                StartCoroutine(PlayNukeDeathAnimationAt(enemy.transform.position));
 
             // 直接销毁，不调用 Die() → 不掉 loot，不播原特效
             Destroy(enemy.gameObject);
@@ -1035,6 +1102,24 @@ public class PlayerController : MonoBehaviour
         // 恢复默认朝右
         if (spriteRenderer != null && rightSprite != null)
             spriteRenderer.sprite = rightSprite;
+    }
+
+    public void OnPickupCollectible(CollectibleType type)
+    {
+        if (audioSource == null) return;
+
+        switch (type)
+        {
+            case CollectibleType.Coin:
+            case CollectibleType.Heart:
+                if (pickupCollectibleSound != null)
+                    audioSource.PlayOneShot(pickupCollectibleSound, pickupVolume);
+                break;
+            default: // Powerup 等
+                if (pickupPowerupSound != null)
+                    audioSource.PlayOneShot(pickupPowerupSound, pickupVolume);
+                break;
+        }
     }
 
     IEnumerator PlayGameOverAnimation()

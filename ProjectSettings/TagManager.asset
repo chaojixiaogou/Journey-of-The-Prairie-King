@@ -15,7 +15,7 @@ TagManager:
   - UI
   - Obstacle
   - 
-  - 
+  - Player
   - 
   - 
   - 
@@ -42,4 +42,34 @@ TagManager:
   m_SortingLayers:
   - name: Default
     uniqueID: 0
+    locked: 0
+  - name: New Layer 1
+    uniqueID: 772888609
+    locked: 0
+  - name: New Layer 2
+    uniqueID: 2641623857
+    locked: 0
+  - name: New Layer 3
+    uniqueID: 4263681695
+    locked: 0
+  - name: New Layer 4
+    uniqueID: 3708797459
+    locked: 0
+  - name: New Layer 5
+    uniqueID: 4223106045
+    locked: 0
+  - name: New Layer 6
+    uniqueID: 771031877
+    locked: 0
+  - name: New Layer 7
+    uniqueID: 637695249
+    locked: 0
+  - name: New Layer 8
+    uniqueID: 3332746347
+    locked: 0
+  - name: New Layer 9
+    uniqueID: 3363207665
+    locked: 0
+  - name: New Layer 10
+    uniqueID: 353976847
     locked: 0

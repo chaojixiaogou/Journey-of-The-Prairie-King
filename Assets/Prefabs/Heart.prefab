@@ -146,3 +146,5 @@ MonoBehaviour:
   totalLifetime: 10
   blinkDuration: 2
   blinkInterval: 0.2
+  pickupCollectibleSound: {fileID: 8300000, guid: feda699843939b840997b1825e7cec9e, type: 3}
+  pickupVolume: 0.7

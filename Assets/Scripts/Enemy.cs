@@ -82,6 +82,11 @@ public class Enemy : MonoBehaviour
     private bool isPaused = false;
     public bool IsPaused => isPaused;
 
+    // ===== 音效 =====
+    public AudioClip[] deathSounds; // 拖入多个音效
+    [Range(0f, 1f)]
+    public float deathVolume = 0.6f;
+
     public void Pause()
     {
         isPaused = true;
@@ -447,6 +452,9 @@ public class Enemy : MonoBehaviour
         if (isDead) return;
         isDead = true;
 
+        // 🔊 播放随机死亡音效
+        PlayRandomDeathSound();
+
         Collider2D collider = GetComponent<Collider2D>();
         if (collider != null)
         {
@@ -455,6 +463,18 @@ public class Enemy : MonoBehaviour
 
         // 启动带金币掉落的死亡动画
         StartCoroutine(PlayDeathAnimationAndDropCoin());
+    }
+
+    /// <summary>
+    /// 播放一个随机的死亡音效（从 deathSounds 中选）
+    /// </summary>
+    public void PlayRandomDeathSound()
+    {
+        if (deathSounds == null || deathSounds.Length == 0)
+            return;
+
+        AudioClip clip = deathSounds[Random.Range(0, deathSounds.Length)];
+        AudioSource.PlayClipAtPoint(clip, transform.position, deathVolume);
     }
 
     IEnumerator PlayDeathAnimationAndDropCoin()
@@ -616,7 +636,7 @@ public class Enemy : MonoBehaviour
         // ✅ 僵尸模式下，敌人不能伤害玩家
         if (isZombieModeActive)
             return;
-            
+
         if (other.CompareTag("Player"))
             other.GetComponent<PlayerController>()?.TakeDamage(1);
     }

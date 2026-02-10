@@ -14,6 +14,7 @@ public class CoinPickup : MonoBehaviour
     private SpriteRenderer spriteRenderer;
     private Coroutine destroyCoroutine;
 
+
     void Start()
     {
         spriteRenderer = GetComponent<SpriteRenderer>();
@@ -55,6 +56,13 @@ public class CoinPickup : MonoBehaviour
         {
             GameController.AddCoins(coinValue);
             // AudioManager.Play("CoinPickup"); // 可选
+
+            // ✅ 通知玩家“我被拾取了”，由玩家决定播什么音效
+            PlayerController player = other.GetComponent<PlayerController>();
+            if (player != null)
+            {
+                player.OnPickupCollectible(CollectibleType.Coin); // 👈 新增方法
+            }
 
             // 立即销毁，取消闪烁
             if (destroyCoroutine != null)

@@ -180,6 +180,10 @@ MonoBehaviour:
   - {fileID: 6155797925736656448, guid: b203469c2dd453642b11be6c1dfc5ab7, type: 3}
   - {fileID: 6155797925736656448, guid: 8d317ef5e11815b4c99c24086b97fca1, type: 3}
   powerupWeights: 0500000005000000050000000500000005000000050000000300000002000000
+  deathSounds:
+  - {fileID: 8300000, guid: efac3891c0e37644fb1dfe578e0b8aa2, type: 3}
+  - {fileID: 8300000, guid: 95905327d454b454790f6ee17e312ee3, type: 3}
+  deathVolume: 0.6
 --- !u!50 &-6926344824489527892
 Rigidbody2D:
   serializedVersion: 4

@@ -12,6 +12,7 @@ public class HeartPickup : MonoBehaviour
     private SpriteRenderer spriteRenderer;
     private Coroutine destroyCoroutine;
 
+
     void Start()
     {
         spriteRenderer = GetComponent<SpriteRenderer>();
@@ -46,6 +47,11 @@ public class HeartPickup : MonoBehaviour
             if (player != null)
             {
                 player.Heal(1); // 恢复1点生命
+                // 在 HeartPickup.cs 的 OnTriggerEnter2D 中
+                if (player != null)
+                {
+                    player.OnPickupCollectible(CollectibleType.Heart);
+                }
             }
 
             // 销毁道具
