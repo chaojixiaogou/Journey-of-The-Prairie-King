@@ -44,6 +44,10 @@ public class Enemy : MonoBehaviour
     public float deathFrameInterval = 0.1f;   // 每帧间隔（秒）
     public float finalFrameHoldTime = 1.0f;   // 最后一帧停留时间
 
+    // ===== 僵尸模式支持 =====
+    private static bool isZombieModeActive = false;
+    private static Transform zombiePlayerTransform = null;
+
     // === 互斥道具掉落（每次最多掉一种）===
     public GameObject coin1Prefab;
     public GameObject coin5Prefab;
@@ -144,6 +148,13 @@ public class Enemy : MonoBehaviour
 
         // 重置移动标记（关键！）
         isMovingThisFrame = false;
+
+        // ===== 新增：僵尸模式下特殊行为 =====
+        if (isZombieModeActive && zombiePlayerTransform != null)
+        {
+            HandleZombieMode();
+            return; // 跳过正常AI
+        }
 
         // === 卡死检测 ===
         if (Vector2.Distance(transform.position, lastPosition) < 0.05f)
@@ -530,6 +541,67 @@ public class Enemy : MonoBehaviour
         }
     }
 
+    public static void SetZombieMode(bool active, Transform player = null)
+    {
+        isZombieModeActive = active;
+        zombiePlayerTransform = active ? player : null;
+    }
+
+    void HandleZombieMode()
+    {
+        // 重置移动标记（用于动画）
+        isMovingThisFrame = false;
+
+        float distanceToPlayer = Vector2.Distance(transform.position, zombiePlayerTransform.position);
+
+        // ✅ 接触杀：距离 < 0.8 就死亡
+        if (distanceToPlayer < 0.8f)
+        {
+            Die(); // 立即死亡（不触发掉落？按需保留）
+            return;
+        }
+
+        // ✅ 逃跑：远离玩家
+        Vector2 awayDir = (transform.position - zombiePlayerTransform.position).normalized;
+        Vector2 desiredPos = (Vector2)transform.position + awayDir * moveSpeed * Time.deltaTime;
+
+        // 尝试移动（简单避障）
+        if (Physics2D.OverlapCircle(desiredPos, 0.25f, obstacleLayer) == null)
+        {
+            transform.position = desiredPos;
+            isMovingThisFrame = true;
+        }
+        else
+        {
+            // 可选：尝试左右滑动逃跑（简化版）
+            TrySlideAway(awayDir);
+        }
+
+        // 更新行走动画（如果移动了）
+        UpdateAnimation();
+    }
+
+    void TrySlideAway(Vector2 awayDirection)
+    {
+        // 尝试垂直方向滑动
+        Vector2 perpRight = new Vector2(-awayDirection.y, awayDirection.x);
+        Vector2 perpLeft = new Vector2(awayDirection.y, -awayDirection.x);
+
+        Vector2 testRight = (Vector2)transform.position + perpRight * moveSpeed * Time.deltaTime;
+        Vector2 testLeft = (Vector2)transform.position + perpLeft * moveSpeed * Time.deltaTime;
+
+        if (Physics2D.OverlapCircle(testRight, 0.25f, obstacleLayer) == null)
+        {
+            transform.position = testRight;
+            isMovingThisFrame = true;
+        }
+        else if (Physics2D.OverlapCircle(testLeft, 0.25f, obstacleLayer) == null)
+        {
+            transform.position = testLeft;
+            isMovingThisFrame = true;
+        }
+    }
+
     // 安全实例化辅助方法
     void InstantiateSafe(GameObject prefab)
     {
@@ -541,6 +613,10 @@ public class Enemy : MonoBehaviour
 
     void OnTriggerEnter2D(Collider2D other)
     {
+        // ✅ 僵尸模式下，敌人不能伤害玩家
+        if (isZombieModeActive)
+            return;
+            
         if (other.CompareTag("Player"))
             other.GetComponent<PlayerController>()?.TakeDamage(1);
     }

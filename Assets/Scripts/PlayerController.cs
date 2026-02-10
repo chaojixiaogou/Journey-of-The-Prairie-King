@@ -104,6 +104,24 @@ public class PlayerController : MonoBehaviour
     public float smokeResidueFrameDuration = 0.1f; // 每帧持续时间（秒）
     public string smokeEffectSortingLayer = "Effects"; // 可选：设置 Sorting Layer
 
+    // === 墓碑（Tombstone / Zombie Mode）===
+    private bool isZombieMode = false;
+    private float zombieEndTime = 0f;
+    private const float ZOMBIE_DURATION = 8f;
+
+    // 僵尸行走动画素材
+    [Header("僵尸行走动画")]
+    public Sprite zombieLeftFoot;   // 迈左脚
+    public Sprite zombieRightFoot;  // 迈右脚
+    public float zombieStepInterval = 0.2f; // 切换频率
+
+    private Coroutine zombieWalkCoroutine;
+
+    [Header("墓碑 - 玩家替换图片")]
+    public Sprite tombstonePlayerReplacementSprite; // 拖入你的静态图片
+    private GameObject replacementImageObject = null; // 运行时生成的对象引用
+
+
     // === 射击缓存（避免频繁 GC）===
     private List<Vector2> tempMainDirections = new List<Vector2>(8);   // 最多8个主方向
     private List<Vector2> tempFinalDirections = new List<Vector2>(24); // 最多24发（8×3）
@@ -190,6 +208,12 @@ public class PlayerController : MonoBehaviour
         if (isCoffeeActive && now >= coffeeEndTime) isCoffeeActive = false;
         if (isBadgeActive && now >= badgeEndTime) isBadgeActive = false;
 
+        // ===== 僵尸模式结束 =====
+        if (isZombieMode && Time.time >= zombieEndTime)
+        {
+            DeactivateZombieMode();
+        }
+
         // 原有的无敌闪烁逻辑（仅在非动画期间生效）
         if (isInvincible)
         {
@@ -234,6 +258,25 @@ public class PlayerController : MonoBehaviour
         }
     }
 
+    void DeactivateZombieMode()
+    {
+        isZombieMode = false;
+        if (zombieWalkCoroutine != null)
+        {
+            StopCoroutine(zombieWalkCoroutine);
+            zombieWalkCoroutine = null;
+        }
+
+        // 恢复默认贴图
+        if (spriteRenderer != null && rightSprite != null)
+            spriteRenderer.sprite = rightSprite;
+
+        // 关闭敌人恐惧模式
+        Enemy.SetZombieMode(false, null);
+
+        Debug.Log("🧟 僵尸模式结束");
+    }
+
     void MoveCharacter(Vector2 direction)
     {
         if (direction == Vector2.zero) return;
@@ -244,6 +287,9 @@ public class PlayerController : MonoBehaviour
         {
             effectiveMoveSpeed *= COFFEE_SPEED_MULTIPLIER;
         }
+
+        if (isZombieMode)
+            effectiveMoveSpeed *= 1.5f; // 僵尸速度 +50%
 
         Vector2 newPosition = (Vector2)transform.position + direction * effectiveMoveSpeed * Time.deltaTime;
 
@@ -286,6 +332,10 @@ public class PlayerController : MonoBehaviour
     void UpdatePlayerSprite()
     {
         if (spriteRenderer == null) return;
+
+        // ✅ 僵尸模式下不更新方向贴图（由行走动画控制）
+        if (isZombieMode)
+            return;
 
         if (Mathf.Abs(shootDirection.x) > Mathf.Abs(shootDirection.y))
         {
@@ -376,18 +426,22 @@ public class PlayerController : MonoBehaviour
     public void TakeDamage(int damage = 1)
     {
         if (isDead || isPlayingDeathAnim || isInvincible) return;
-
+    
         currentLives -= damage;
-
-        // 👇 触发生命值变化事件
         OnLivesChanged?.Invoke();
-
+    
         if (currentLives <= 0)
         {
             StartCoroutine(PlayGameOverAnimation());
         }
         else
         {
+            // ✅ 新增：只要没死，就增加 20 秒时间
+            if (GameController.Instance != null)
+            {
+                GameController.Instance.AddTime(20f);
+            }
+    
             StartCoroutine(PlayDeathAnimationThenTriggerRespawn());
         }
     }
@@ -517,6 +571,10 @@ public class PlayerController : MonoBehaviour
             
             case PowerupType.SmokeGrenade:
                 UseSmokeGrenade();
+                break;
+
+            case PowerupType.Tombstone:
+                UseTombstone();
                 break;
 
             // 其他道具暂不处理
@@ -803,19 +861,19 @@ public class PlayerController : MonoBehaviour
     {
         bool wasInvincible = isInvincible;
         isInvincible = true;
-    
+
         yield return new WaitForSeconds(SMOKE_DURATION);
-    
+
         // ===== 恢复状态 =====
         isInvincible = wasInvincible;
         isSmokeActive = false;
-    
+
         // ✅ 关键修复：如果不再无敌，确保 Sprite 显示
         if (!isInvincible && spriteRenderer != null)
         {
             spriteRenderer.enabled = true;
         }
-    
+
         // 恢复敌人
         Enemy[] enemies = FindObjectsOfType<Enemy>();
         foreach (Enemy enemy in enemies)
@@ -825,9 +883,160 @@ public class PlayerController : MonoBehaviour
                 enemy.Resume();
             }
         }
-    
+
         Debug.Log("💨 烟雾效果结束");
     }
+
+    void UseTombstone()
+    {
+        Debug.Log("⚰️ 使用墓碑！进入僵尸模式");
+
+        StartCoroutine(TombstoneTransformationSequence());
+    }
+
+    IEnumerator TombstoneTransformationSequence()
+    {
+        // ===== 1. 暂停游戏 =====
+        Time.timeScale = 0f;
+
+        // ===== 2. 创建全屏遮罩（完全变黑）=====
+        GameObject overlay = CreateFullscreenOverlay();
+
+        // ===== 3. 隐藏玩家主精灵，显示替换图片 =====
+        if (spriteRenderer != null)
+            spriteRenderer.enabled = false;
+
+        ShowPlayerReplacementImage();
+
+        // ===== 4. 等待一段时间（展示效果）=====
+        yield return new WaitForSecondsRealtime(1.0f); // 使用 Realtime，因为 timeScale=0
+
+        // ===== 5. 恢复 =====
+        Time.timeScale = 1f;
+        Destroy(overlay);
+        HidePlayerReplacementImage();
+        if (spriteRenderer != null)
+            spriteRenderer.enabled = true;
+
+        // ===== 6. 激活僵尸模式 =====
+        ActivateZombieMode();
+    }
+
+    private GameObject replacementUIImage = null;
+
+    void ShowPlayerReplacementImage()
+    {
+        if (tombstonePlayerReplacementSprite == null || Camera.main == null) return;
+
+        // 屏幕坐标
+        Vector3 viewportPos = Camera.main.WorldToViewportPoint(transform.position);
+        if (viewportPos.z <= 0) viewportPos = new Vector3(0.5f, 0.5f, 0);
+        Vector2 screenPos = new Vector2(viewportPos.x * Screen.width, viewportPos.y * Screen.height);
+
+        // 创建 UI 根
+        GameObject uiRoot = new GameObject("TombstoneReplacementUI");
+        Canvas canvas = uiRoot.AddComponent<Canvas>();
+        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+        canvas.sortingOrder = 1000;
+
+        // 创建 Image
+        GameObject imageObj = new GameObject("ReplacementImage");
+        imageObj.transform.SetParent(uiRoot.transform);
+
+        Image image = imageObj.AddComponent<Image>();
+        image.sprite = tombstonePlayerReplacementSprite;
+        image.preserveAspect = true; // 保持比例
+        image.raycastTarget = false; // 避免阻挡输入（可选）
+
+        RectTransform rect = image.rectTransform;
+
+        // 🔑 关键：重置锚点为“中心点”，这样 sizeDelta 才表示宽高
+        rect.anchorMin = new Vector2(0.5f, 0.5f);
+        rect.anchorMax = new Vector2(0.5f, 0.5f);
+        rect.pivot = new Vector2(0.5f, 0.5f);
+
+        // 设置位置（相对于屏幕中心）
+        rect.anchoredPosition = screenPos - new Vector2(Screen.width * 0.5f, Screen.height * 0.5f);
+
+        // 🔑 方法一：使用 SetNativeSize 获取原始尺寸，再缩放
+        image.SetNativeSize(); // 这会把 sizeDelta 设为 Sprite 的“UI 像素尺寸”
+
+        // 现在你可以缩放它！比如放大 1.5 倍
+        float desiredScale = 0.45f;
+        rect.sizeDelta = new Vector2(
+            rect.sizeDelta.x * desiredScale,
+            rect.sizeDelta.y * desiredScale
+        );
+
+        replacementUIImage = uiRoot;
+    }
+
+    void HidePlayerReplacementImage()
+    {
+        if (replacementUIImage != null)
+        {
+            Destroy(replacementUIImage);
+            replacementUIImage = null;
+        }
+    }
+
+    /// <summary>
+    /// 创建全屏完全黑色遮罩（仅 UI 层）
+    /// </summary>
+    GameObject CreateFullscreenOverlay()
+    {
+        GameObject go = new GameObject("TombstoneOverlay");
+        Canvas canvas = go.AddComponent<Canvas>();
+        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+        canvas.sortingOrder = 999; // 确保在最上层
+
+        Image image = go.AddComponent<Image>();
+        image.color = new Color(0, 0, 0, 1); // 完全黑色且不透明
+
+        // 自适应屏幕
+        RectTransform rect = image.rectTransform;
+        rect.anchorMin = Vector2.zero;
+        rect.anchorMax = Vector2.one;
+        rect.offsetMin = Vector2.zero;
+        rect.offsetMax = Vector2.zero;
+
+        return go;
+    }
+
+    
+
+
+    void ActivateZombieMode()
+    {
+        isZombieMode = true;
+        zombieEndTime = Time.time + ZOMBIE_DURATION;
+
+        // 启动行走动画
+        if (zombieWalkCoroutine != null)
+            StopCoroutine(zombieWalkCoroutine);
+        zombieWalkCoroutine = StartCoroutine(ZombieWalkAnimation());
+
+        // 通知敌人进入“恐惧模式”
+        Enemy.SetZombieMode(true, transform);
+    }
+
+    IEnumerator ZombieWalkAnimation()
+    {
+        if (spriteRenderer == null) yield break;
+
+        bool useLeft = true;
+        while (isZombieMode)
+        {
+            spriteRenderer.sprite = useLeft ? zombieLeftFoot : zombieRightFoot;
+            useLeft = !useLeft;
+            yield return new WaitForSeconds(zombieStepInterval);
+        }
+
+        // 恢复默认朝右
+        if (spriteRenderer != null && rightSprite != null)
+            spriteRenderer.sprite = rightSprite;
+    }
+
     IEnumerator PlayGameOverAnimation()
     {
         isDead = true; // 标记永久死亡

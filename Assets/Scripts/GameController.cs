@@ -76,6 +76,22 @@ public class GameController : MonoBehaviour
     }
 
     /// <summary>
+    /// 增加关卡剩余时间（例如：受到伤害但未死亡时奖励时间）
+    /// </summary>
+    public void AddTime(float seconds)
+    {
+        if (!isLevelTimerActive) return;
+
+        // 🔑 关键：增加后不能超过 levelTime
+        currentTime = Mathf.Min(currentTime + seconds, levelTime);
+
+        // 立即触发 UI 更新
+        OnLevelTimeUpdated?.Invoke(currentTime, levelTime);
+
+        Debug.Log($"⏳ 倒计时增加 {seconds} 秒，当前剩余: {currentTime:F1}s");
+    }
+
+    /// <summary>
     /// 增加金币（由 CoinPickup 调用）
     /// </summary>
     public static void AddCoins(int amount)

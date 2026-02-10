@@ -3745,6 +3745,13 @@ MonoBehaviour:
   - {fileID: 1456683429, guid: 1b82ee0dd0639a748ad94ef20f61aaa6, type: 3}
   smokeResidueFrameDuration: 0.1
   smokeEffectSortingLayer: Effects
+  zombieLeftFoot: {fileID: -1931937750, guid: 1b82ee0dd0639a748ad94ef20f61aaa6, type: 3}
+  zombieRightFoot: {fileID: -251708183, guid: 1b82ee0dd0639a748ad94ef20f61aaa6, type: 3}
+  zombieStepInterval: 0.2
+  lightningMiddleSprite: {fileID: -57567933, guid: 1b82ee0dd0639a748ad94ef20f61aaa6, type: 3}
+  lightningEndSprite: {fileID: -1017056246, guid: 1b82ee0dd0639a748ad94ef20f61aaa6, type: 3}
+  lightningSegmentHeight: 0.5
+  lightningDisplayDuration: 0.4
   deathAnimationFrames:
   - {fileID: -747680499, guid: 1b82ee0dd0639a748ad94ef20f61aaa6, type: 3}
   - {fileID: -2102313298, guid: 1b82ee0dd0639a748ad94ef20f61aaa6, type: 3}
