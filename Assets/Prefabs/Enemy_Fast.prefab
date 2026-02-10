@@ -152,6 +152,8 @@ MonoBehaviour:
     m_Bits: 64
   walkLeft: {fileID: -718602340, guid: 1b82ee0dd0639a748ad94ef20f61aaa6, type: 3}
   walkRight: {fileID: -1546475445, guid: 1b82ee0dd0639a748ad94ef20f61aaa6, type: 3}
+  hitSprite: {fileID: 389901939, guid: 1b82ee0dd0639a748ad94ef20f61aaa6, type: 3}
+  hitFlashDuration: 0.1
   deathFrames:
   - {fileID: -1989855200, guid: 1b82ee0dd0639a748ad94ef20f61aaa6, type: 3}
   - {fileID: -1372684459, guid: 1b82ee0dd0639a748ad94ef20f61aaa6, type: 3}
@@ -163,7 +165,10 @@ MonoBehaviour:
   finalFrameHoldTime: 5
   coin1Prefab: {fileID: 6219252736255145464, guid: 4d67493ddd6855d4699db72f567efc14, type: 3}
   coin5Prefab: {fileID: 6219252736255145464, guid: 5a302caedb550e84e976b67bc5fee899, type: 3}
-  dropChance: 0.3
+  heartPrefab: {fileID: 6137476867926967259, guid: 0f5d4359db0fd4f4ebeba4caa6abf215, type: 3}
+  totalDropChance: 0.8
+  coinWeight: 70
+  heartWeight: 30
   rareCoinChance: 0.1
 --- !u!50 &-6926344824489527892
 Rigidbody2D:

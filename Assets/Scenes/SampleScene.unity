@@ -2331,8 +2331,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 57eadfd07a0479e4c90d13eeecc3fcf4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  enemyPrefab: {fileID: 9093016304836105925, guid: d89ffa0a6ba5f244bad1ddac2de25926, type: 3}
-  totalEnemiesToSpawn: -1
+  enemyTypes:
+  - prefab: {fileID: 9093016304836105925, guid: d89ffa0a6ba5f244bad1ddac2de25926, type: 3}
+    weight: 60
+  - prefab: {fileID: 9093016304836105925, guid: 0dbad77d882eab046955dde71149b858, type: 3}
+    weight: 20
+  - prefab: {fileID: 9093016304836105925, guid: fa5739c84d3c1ab419757a163ba6a928, type: 3}
+    weight: 20
+  totalEnemiesToSpawn: 240
   spawnInterval: 2
 --- !u!4 &1001310030
 Transform:

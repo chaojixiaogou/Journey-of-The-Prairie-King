@@ -248,6 +248,13 @@ public class PlayerController : MonoBehaviour
             Destroy(enemy.gameObject);
         }
 
+        // 2. ✅ 清除所有 Collectible 道具（金币、心、未来道具）
+        GameObject[] collectibles = GameObject.FindGameObjectsWithTag("Collectible");
+        foreach (GameObject item in collectibles)
+        {
+            Destroy(item);
+        }
+
         // ===== 2. 立即暂停所有生成器 =====
         EnemySpawner[] spawners = FindObjectsOfType<EnemySpawner>();
         foreach (var spawner in spawners)
@@ -385,6 +392,15 @@ public class PlayerController : MonoBehaviour
         deathEffectRenderer.enabled = false; // 默认隐藏
     }
 
+    public void Heal(int amount)
+    {
+        currentLives += amount; // 直接加，无上限！
+        Debug.Log($"❤️ 玩家回复 {amount} 点生命，当前: {currentLives} (无上限)");
+
+        // 可选：触发 UI 更新（如果你的 UI 显示当前生命）
+        OnLivesChanged?.Invoke();
+    }
+
     IEnumerator PlayGameOverAnimation()
     {
         isDead = true; // 标记永久死亡
@@ -395,6 +411,13 @@ public class PlayerController : MonoBehaviour
         foreach (Enemy enemy in enemies)
         {
             Destroy(enemy.gameObject);
+        }
+
+        // 2. ✅ 清除所有 Collectible 道具（金币、心、未来道具）
+        GameObject[] collectibles = GameObject.FindGameObjectsWithTag("Collectible");
+        foreach (GameObject item in collectibles)
+        {
+            Destroy(item);
         }
 
         // 2. 暂停生成器

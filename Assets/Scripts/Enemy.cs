@@ -15,6 +15,12 @@ public class Enemy : MonoBehaviour
     public Sprite walkLeft;   // 迈左脚帧
     public Sprite walkRight;  // 迈右脚帧
 
+    // === 受击反馈 ===
+    public Sprite hitSprite;               // 拖入受击图片
+    public float hitFlashDuration = 0.1f;  // 受击图片显示时间（秒）
+    private float hitTimer = 0f;
+    private bool isShowingHit = false;
+
     // === 内部状态 ===
     private int currentHealth;
     private SpriteRenderer spriteRenderer;
@@ -38,12 +44,20 @@ public class Enemy : MonoBehaviour
     public float deathFrameInterval = 0.1f;   // 每帧间隔（秒）
     public float finalFrameHoldTime = 1.0f;   // 最后一帧停留时间
 
-    // === 掉落金币 ===
-    public GameObject coin1Prefab; // 拖入 Coin_1 Prefab
-    public GameObject coin5Prefab; // 拖入 Coin_5 Prefab
+    // === 互斥道具掉落（每次最多掉一种）===
+    public GameObject coin1Prefab;
+    public GameObject coin5Prefab;
+    public GameObject heartPrefab;
 
-    public float dropChance = 1f;      // 30% 掉落概率
-    public float rareCoinChance = 0.1f;  // 掉落时，10% 是5金币
+    [Header("=== 掉落总概率 ===")]
+    public float totalDropChance = 0.8f; // 80% 概率掉落任意道具
+
+    [Header("=== 道具类型权重（仅在掉落时生效）===")]
+    public int coinWeight = 70;   // 金币权重（包括普通+稀有）
+    public int heartWeight = 30;  // 生命道具权重
+
+    [Tooltip("当掉落金币时，有此概率是5金币")]
+    public float rareCoinChance = 0.1f;
 
     // === 防卡死 ===
     private Vector2 lastPosition;
@@ -142,8 +156,8 @@ public class Enemy : MonoBehaviour
             MoveDirectlyTowardsPlayer();
         }
 
-        // === 更新行走动画 ===
-        UpdateWalkAnimation();
+        // === 更新动画（受击 or 行走）===
+        UpdateAnimation();
     }
 
     void FollowPath()
@@ -233,9 +247,30 @@ public class Enemy : MonoBehaviour
         }
     }
 
-    void UpdateWalkAnimation()
+    void UpdateAnimation()
     {
-        if (!isMovingThisFrame) return;
+        // 如果正在显示受击效果
+        if (isShowingHit)
+        {
+            hitTimer -= Time.deltaTime;
+            if (hitTimer <= 0f)
+            {
+                // 受击结束，恢复行走动画
+                isShowingHit = false;
+                // 注意：不要在这里直接设 sprite！因为可能下一帧就不移动了
+                // 我们让行走逻辑自己决定显示哪一帧
+            }
+            // 受击期间保持 hitSprite 不变（无需操作）
+            return;
+        }
+
+        // === 以下是原行走动画逻辑 ===
+        if (!isMovingThisFrame)
+        {
+            // 可选：静止时显示默认帧（比如 walkRight）
+            // spriteRenderer.sprite = walkRight;
+            return;
+        }
 
         walkAnimTimer += Time.deltaTime;
         if (walkAnimTimer >= WALK_ANIM_INTERVAL)
@@ -344,13 +379,32 @@ public class Enemy : MonoBehaviour
     // ===== 受伤 & 死亡 =====
     public void TakeDamage(int damage)
     {
-        if (isDead) return; // 防止重复死亡
+        if (isDead) return;
 
         currentHealth -= damage;
+
+        // 👇 新增：只要受伤（无论死不死），都尝试显示受击效果
+        if (currentHealth > 0 && hitSprite != null)
+        {
+            ShowHitEffect();
+        }
+
         if (currentHealth <= 0)
         {
             Die();
         }
+    }
+
+    /// <summary>
+    /// 立即显示受击图片，并设置计时器
+    /// </summary>
+    void ShowHitEffect()
+    {
+        if (spriteRenderer == null || hitSprite == null) return;
+
+        spriteRenderer.sprite = hitSprite;
+        isShowingHit = true;
+        hitTimer = hitFlashDuration; // 从这里开始倒计时
     }
 
     private bool isDead = false;
@@ -386,7 +440,7 @@ public class Enemy : MonoBehaviour
             spriteRenderer.sprite = deathFrames[deathFrames.Length - 1];
 
             // 👇 关键：立即掉落金币（就在最后一帧显示时！）
-            TryDropCoin();
+            TryDropLoot();
 
             // 继续停留 finalFrameHoldTime 秒（尸体+金币共存）
             yield return new WaitForSeconds(finalFrameHoldTime);
@@ -395,7 +449,7 @@ public class Enemy : MonoBehaviour
         else
         {
             // 立即掉金币，短暂停留后销毁
-            TryDropCoin();
+            TryDropLoot();
             yield return new WaitForSeconds(finalFrameHoldTime);
         }
 
@@ -404,27 +458,39 @@ public class Enemy : MonoBehaviour
     }
 
     /// <summary>
-    /// 尝试在当前位置掉落金币（1 或 5）
+    /// 敌人死亡时，按互斥规则尝试掉落一种道具（金币 或 心）
     /// </summary>
-    void TryDropCoin()
+    void TryDropLoot()
     {
-        if (Random.value >= dropChance)
-            return; // 未触发掉落
+        // 第一步：是否掉落任何道具？
+        if (Random.value >= totalDropChance)
+            return; // 不掉落
 
-        GameObject coinToDrop = (Random.value < rareCoinChance) ? coin5Prefab : coin1Prefab;
+        // 第二步：计算总权重
+        int totalWeight = coinWeight + heartWeight;
+        if (totalWeight <= 0) return;
 
-        if (coinToDrop != null)
+        // 第三步：随机选择类型
+        int roll = Random.Range(0, totalWeight);
+
+        if (roll < coinWeight)
         {
-            // 可选：稍微抬高一点，避免卡在地面
-            Vector3 dropPosition = transform.position;
-            Instantiate(coinToDrop, dropPosition, Quaternion.identity);
-
-            // 调试日志（可注释）
-            // Debug.Log($"✅ {name} 掉落了 {coinToDrop.name}");
+            // 掉落金币
+            GameObject coinToDrop = (Random.value < rareCoinChance) ? coin5Prefab : coin1Prefab;
+            if (coinToDrop != null)
+            {
+                Instantiate(coinToDrop, transform.position, Quaternion.identity);
+                Debug.Log($"✅ {name} 掉落了 {coinToDrop.name}");
+            }
         }
         else
         {
-            Debug.LogWarning("[Enemy] 金币 Prefab 未赋值！请检查 Inspector。", this);
+            // 掉落生命道具
+            if (heartPrefab != null)
+            {
+                Instantiate(heartPrefab, transform.position, Quaternion.identity);
+                Debug.Log($"❤️ {name} 掉落了生命道具");
+            }
         }
     }
 

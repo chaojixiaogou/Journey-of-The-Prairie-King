@@ -2995,7 +2995,7 @@ TextureImporter:
         width: 15
         height: 15
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       outline: []
       physicsShape: []
@@ -3016,7 +3016,7 @@ TextureImporter:
         width: 15
         height: 15
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       outline: []
       physicsShape: []
@@ -3024,6 +3024,132 @@ TextureImporter:
       bones: []
       spriteID: f6950f62f5edeab41bbf32915cf3738f
       internalID: -718602340
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: prairie_king_spritesheet_139
+      rect:
+        serializedVersion: 2
+        x: 224
+        y: 114
+        width: 15
+        height: 15
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: f4dce4d9efc8c4740b719d75aac2cc45
+      internalID: 856741247
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: prairie_king_spritesheet_140
+      rect:
+        serializedVersion: 2
+        x: 239
+        y: 113
+        width: 16
+        height: 16
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 829f770d8a6b3964c85f69d64cbf0436
+      internalID: -872452744
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: prairie_king_spritesheet_141
+      rect:
+        serializedVersion: 2
+        x: 256
+        y: 114
+        width: 15
+        height: 15
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 8f04ad8d57ffec94989796646286c207
+      internalID: -1877248218
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: prairie_king_spritesheet_142
+      rect:
+        serializedVersion: 2
+        x: 272
+        y: 114
+        width: 15
+        height: 15
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 5b93eb9270759204dbe80f621c41dfd2
+      internalID: -1587953178
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: prairie_king_spritesheet_143
+      rect:
+        serializedVersion: 2
+        x: 287
+        y: 113
+        width: 16
+        height: 15
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 1856ce3b206bcd843b7a52fb5a719dc7
+      internalID: 1538443925
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: prairie_king_spritesheet_144
+      rect:
+        serializedVersion: 2
+        x: 303
+        y: 114
+        width: 15
+        height: 15
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 80cbe20af71234444ba04e7c06429cc9
+      internalID: 389901939
       vertices: []
       indices: 
       edges: []
@@ -3084,7 +3210,13 @@ TextureImporter:
       prairie_king_spritesheet_136: 542033889
       prairie_king_spritesheet_137: -1546475445
       prairie_king_spritesheet_138: -718602340
+      prairie_king_spritesheet_139: 856741247
       prairie_king_spritesheet_14: 1147395788
+      prairie_king_spritesheet_140: -872452744
+      prairie_king_spritesheet_141: -1877248218
+      prairie_king_spritesheet_142: -1587953178
+      prairie_king_spritesheet_143: 1538443925
+      prairie_king_spritesheet_144: 389901939
       prairie_king_spritesheet_15: -868797334
       prairie_king_spritesheet_16: 1790818428
       prairie_king_spritesheet_17: 513888358
