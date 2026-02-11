@@ -146,6 +146,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   damage: 25
   speed: 10
+  bulletWallLayer:
+    serializedVersion: 2
+    m_Bits: 128
 --- !u!50 &-4502872160119053270
 Rigidbody2D:
   serializedVersion: 4

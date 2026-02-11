@@ -14,7 +14,7 @@ GameObject:
   - component: {fileID: 3570451836942327210}
   - component: {fileID: -6926344824489527892}
   m_Layer: 0
-  m_Name: Enemy_Basic
+  m_Name: Enemy_Fly
   m_TagString: Enemy
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -76,7 +76,7 @@ SpriteRenderer:
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 1
-  m_Sprite: {fileID: 331400875, guid: 1b82ee0dd0639a748ad94ef20f61aaa6, type: 3}
+  m_Sprite: {fileID: -1222034684, guid: 1b82ee0dd0639a748ad94ef20f61aaa6, type: 3}
   m_Color: {r: 0.99371064, g: 0.97808623, b: 0.97808623, a: 1}
   m_FlipX: 0
   m_FlipY: 0
@@ -122,7 +122,7 @@ BoxCollider2D:
   m_Offset: {x: -0.0002925992, y: -0.002328813}
   m_SpriteTilingProperty:
     border: {x: 0, y: 0, z: 0, w: 0}
-    pivot: {x: 0.5, y: 0.5}
+    pivot: {x: 0.5149251, y: 0.48507336}
     oldSize: {x: 0.9375, y: 0.9375}
     newSize: {x: 1, y: 1}
     adaptiveTilingThreshold: 0.5
@@ -145,21 +145,16 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   maxHealth: 50
-  moveSpeed: 2
+  moveSpeed: 3
   pathUpdateInterval: 1
   obstacleLayer:
     serializedVersion: 2
-    m_Bits: 192
-  enemyType: 0
-  walkLeft: {fileID: 331400875, guid: 1b82ee0dd0639a748ad94ef20f61aaa6, type: 3}
-  walkRight: {fileID: 2084502580, guid: 1b82ee0dd0639a748ad94ef20f61aaa6, type: 3}
-  hitSprite: {fileID: 856741247, guid: 1b82ee0dd0639a748ad94ef20f61aaa6, type: 3}
+    m_Bits: 0
+  enemyType: 1
+  walkLeft: {fileID: -1222034684, guid: 1b82ee0dd0639a748ad94ef20f61aaa6, type: 3}
+  walkRight: {fileID: 644484240, guid: 1b82ee0dd0639a748ad94ef20f61aaa6, type: 3}
+  hitSprite: {fileID: -872452744, guid: 1b82ee0dd0639a748ad94ef20f61aaa6, type: 3}
   hitFlashDuration: 0.1
-  sentryActivateFrames: []
-  sentryFrameInterval: 0.1
-  sentryHitSprite: {fileID: 0}
-  sentryIdleSprite: {fileID: 0}
-  isSentryActivated: 0
   deathFrames:
   - {fileID: -1989855200, guid: 1b82ee0dd0639a748ad94ef20f61aaa6, type: 3}
   - {fileID: -1372684459, guid: 1b82ee0dd0639a748ad94ef20f61aaa6, type: 3}
@@ -174,7 +169,7 @@ MonoBehaviour:
   heartPrefab: {fileID: 6137476867926967259, guid: 0f5d4359db0fd4f4ebeba4caa6abf215, type: 3}
   totalDropChance: 0.8
   coinWeight: 70
-  heartWeight: 300
+  heartWeight: 30
   rareCoinChance: 0.1
   powerupPrefabs:
   - {fileID: 6155797925736656448, guid: b2218c89c4eeda24d89b85d094214903, type: 3}
@@ -185,7 +180,7 @@ MonoBehaviour:
   - {fileID: 6155797925736656448, guid: 0c29678ecba81eb499be25e9e2308bfd, type: 3}
   - {fileID: 6155797925736656448, guid: b203469c2dd453642b11be6c1dfc5ab7, type: 3}
   - {fileID: 6155797925736656448, guid: 8d317ef5e11815b4c99c24086b97fca1, type: 3}
-  powerupWeights: 0500000005000000050000000500000005000000050000002c01000002000000
+  powerupWeights: 0500000005000000050000000500000005000000050000000300000002000000
   deathSounds:
   - {fileID: 8300000, guid: efac3891c0e37644fb1dfe578e0b8aa2, type: 3}
   - {fileID: 8300000, guid: 95905327d454b454790f6ee17e312ee3, type: 3}

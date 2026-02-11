@@ -2,6 +2,14 @@ using UnityEngine;
 using System.Collections.Generic;
 using System.Collections;
 
+public enum EnemyType
+{
+    Normal,      // 普通敌人（A* 寻路）
+    Ghost,        // 幽灵（穿墙，直线追击）
+    Sentry       // 新增：哨兵（移动到随机点后静止+强化）
+    // 未来可加：Zombie, Boss, Kamikaze...
+}
+
 [RequireComponent(typeof(Rigidbody2D))]
 public class Enemy : MonoBehaviour
 {
@@ -10,6 +18,9 @@ public class Enemy : MonoBehaviour
     public float moveSpeed = 2f;
     public float pathUpdateInterval = 1.0f;
     public LayerMask obstacleLayer;
+
+    [Header("=== 敌人类型 ===")]
+    public EnemyType enemyType = EnemyType.Normal; // 默认普通敌人
 
     // === 行走动画资源（仅需这两张图）===
     public Sprite walkLeft;   // 迈左脚帧
@@ -35,6 +46,16 @@ public class Enemy : MonoBehaviour
     private Vector2 wallSlideDirection = Vector2.zero;
     private float wallSlideTimer = 0f;
     private const float WALL_SLIDE_DURATION = 0.6f;
+
+    [Header("=== 哨兵模式配置 ===")]
+    public Sprite[] sentryActivateFrames;     // 4张激活动画帧
+    public float sentryFrameInterval = 0.1f; // 动画播放速度
+    public Sprite sentryHitSprite;            // 拖入哨兵专用受击图
+    public Sprite sentryIdleSprite;
+    public bool isSentryActivated = false;    // 是否已激活（只触发一次）
+    private bool sentryPathComputed = false; // 是否已计算路径
+
+    private Vector3? sentryTargetPosition = null; // 哨兵的目标点（Nullable）
 
     // === 方向缓存（用于移动，非动画）===
     private Vector2 lastMovementDirection = Vector2.right;
@@ -112,8 +133,31 @@ public class Enemy : MonoBehaviour
             enabled = false;
             return;
         }
+        
 
-        EnsureNotInsideObstacle();
+        // 幽灵不需要初始化路径系统
+        if (enemyType != EnemyType.Ghost)
+        {
+            // ===== 哨兵特殊初始化 =====
+            if (enemyType == EnemyType.Sentry)
+            {
+                EnsureNotInsideObstacle();
+                FindRandomValidSentryPosition();
+
+                // 👇 立即计算一次路径（只做一次！）
+                if (sentryTargetPosition.HasValue)
+                {
+                    currentPath = FindPath(transform.position, sentryTargetPosition.Value);
+                    currentPathIndex = 0;
+                    sentryPathComputed = true;
+                    lastPathUpdateTime = Time.time; // 仅用于调试或卡死检测
+                }
+            }
+            else
+            {
+                EnsureNotInsideObstacle();
+            }
+        }
         lastPosition = transform.position;
 
         // 初始化第一帧动画
@@ -121,8 +165,62 @@ public class Enemy : MonoBehaviour
             spriteRenderer.sprite = walkRight;
     }
 
+    void FindRandomValidSentryPosition()
+    {
+        int attempts = 0;
+        const int maxAttempts = 100;
+        const float minDistance = 3f; // 至少离当前点 3 格（可调）
+
+        Vector2 startPos = transform.position;
+
+        while (attempts < maxAttempts)
+        {
+            float x = Random.Range(-7.5f, 7.5f);
+            float y = Random.Range(-7.5f, 7.5f);
+            Vector3 candidate = new Vector3(x, y, 0);
+
+            // 检查距离
+            if (Vector2.Distance(startPos, candidate) < minDistance)
+                continue;
+
+            // 检查是否无障碍
+            if (Physics2D.OverlapCircle(candidate, 0.25f, obstacleLayer) == null)
+            {
+                sentryTargetPosition = candidate;
+                Debug.Log($"[Sentry] 找到目标点: {candidate}");
+                return;
+            }
+            attempts++;
+        }
+
+        // 如果失败，尝试放宽距离限制
+        attempts = 0;
+        while (attempts < maxAttempts)
+        {
+            float x = Random.Range(-7.5f, 7.5f);
+            float y = Random.Range(-7.5f, 7.5f);
+            Vector3 candidate = new Vector3(x, y, 0);
+
+            if (Physics2D.OverlapCircle(candidate, 0.25f, obstacleLayer) == null)
+            {
+                sentryTargetPosition = candidate;
+                Debug.LogWarning("[Sentry] 使用近距离目标点（理想点未找到）");
+                return;
+            }
+            attempts++;
+        }
+
+        // 彻底失败：停在原地并激活
+        Debug.LogError("[Sentry] 无法找到有效目标点！原地激活。");
+        sentryTargetPosition = transform.position;
+    }
+
     void EnsureNotInsideObstacle()
     {
+        // 幽灵不需要避障
+        if (enemyType == EnemyType.Ghost)
+            return;
+
         Vector2 pos = transform.position;
         if (Physics2D.OverlapCircle(pos, 0.25f, obstacleLayer) != null)
         {
@@ -151,25 +249,43 @@ public class Enemy : MonoBehaviour
     {
         if (isPaused || isDead || player == null) return;
 
-        // 重置移动标记（关键！）
         isMovingThisFrame = false;
 
-        // ===== 新增：僵尸模式下特殊行为 =====
+        // ===== 僵尸模式优先处理 =====
         if (isZombieModeActive && zombiePlayerTransform != null)
         {
             HandleZombieMode();
-            return; // 跳过正常AI
+            UpdateAnimation();
+            return;
         }
 
+        // ===== 按敌人类型执行不同 AI =====
+        switch (enemyType)
+        {
+            case EnemyType.Normal:
+                RunNormalAI();
+                break;
+            case EnemyType.Ghost:
+                RunGhostAI();
+                break;
+            case EnemyType.Sentry:
+                RunSentryAI();
+                break;
+            default:
+                RunNormalAI(); // 安全兜底
+                break;
+        }
+
+        UpdateAnimation();
+    }
+
+    void RunNormalAI()
+    {
         // === 卡死检测 ===
         if (Vector2.Distance(transform.position, lastPosition) < 0.05f)
-        {
             stuckTime += Time.deltaTime;
-        }
         else
-        {
             stuckTime = 0f;
-        }
         lastPosition = transform.position;
 
         // === 动态路径更新 ===
@@ -183,16 +299,144 @@ public class Enemy : MonoBehaviour
 
         // === 移动逻辑 ===
         if (currentPath != null && currentPath.Count > 0)
-        {
             FollowPath();
+        else
+            MoveDirectlyTowardsPlayer();
+    }
+
+    void RunGhostAI()
+    {
+        // 幽灵：无视障碍，直接朝玩家移动
+        Vector2 direction = (player.position - transform.position).normalized;
+
+        // 更新方向缓存（用于动画）
+        if (direction.magnitude > 0.1f)
+            lastMovementDirection = direction;
+
+        // 直接移动（不检测障碍）
+        transform.position += (Vector3)direction * moveSpeed * Time.deltaTime;
+        isMovingThisFrame = true;
+    }
+
+    void RunSentryAI()
+    {
+        if (isSentryActivated) return;
+        if (!sentryTargetPosition.HasValue || !sentryPathComputed)
+        {
+            isSentryActivated = true;
+            ActivateSentryMode();
+            return;
+        }
+
+        // 使用专用路径跟随
+        if (currentPath != null && currentPath.Count > 0)
+        {
+            FollowSentryPath(); // 👈 不再调用通用 FollowPath
         }
         else
         {
-            MoveDirectlyTowardsPlayer();
+            // 路径为空？直接走向目标（也不检测障碍）
+            MoveToPathPoint(sentryTargetPosition.Value);
         }
 
-        // === 更新动画（受击 or 行走）===
-        UpdateAnimation();
+        // 到达判断
+        if (Vector2.Distance(transform.position, sentryTargetPosition.Value) < 0.4f)
+        {
+            isSentryActivated = true;
+            ActivateSentryMode();
+        }
+    }
+
+    void ActivateSentryMode()
+    {
+        // 血量翻倍（基于原始 maxHealth）
+        currentHealth = maxHealth * 2;
+        maxHealth = currentHealth; // 可选：也更新 maxHealth
+
+        // 播放激活动画
+        if (sentryActivateFrames != null && sentryActivateFrames.Length >= 4)
+        {
+            StartCoroutine(PlaySentryActivationAnimation());
+        }
+        else
+        {
+            // 如果没给动画，直接切到默认状态（比如最后一帧）
+            Debug.LogWarning("未设置哨兵激活动画！");
+            isMovingThisFrame = false;
+        }
+    }
+
+    IEnumerator PlaySentryActivationAnimation()
+    {
+        // 播放前3帧
+        for (int i = 0; i < sentryActivateFrames.Length - 1; i++)
+        {
+            spriteRenderer.sprite = sentryActivateFrames[i];
+            yield return new WaitForSeconds(sentryFrameInterval);
+        }
+
+        // 设置最后一帧并永久保持
+        spriteRenderer.sprite = sentryActivateFrames[sentryActivateFrames.Length - 1];
+        spriteRenderer.sprite = sentryIdleSprite;
+
+        // 确保行走动画不再覆盖它
+        isMovingThisFrame = false;
+        // （后续 UpdateAnimation 不会改 sprite）
+    }
+
+    void MoveDirectlyTo(Vector3 target)
+    {
+        Vector2 direction = (target - transform.position).normalized;
+        if (direction.magnitude < 0.1f) return;
+
+        lastMovementDirection = direction;
+        Vector2 desiredPos = (Vector2)transform.position + direction * moveSpeed * Time.deltaTime;
+
+        // 👇 关键：只移动，不尝试滑动！
+        if (Physics2D.OverlapCircle(desiredPos, 0.25f, obstacleLayer) == null)
+        {
+            transform.position = desiredPos;
+            isMovingThisFrame = true;
+        }
+        // 否则：不动（等待下次路径更新）
+    }
+
+    /// <summary>
+    /// 哨兵专用：沿路径点移动，不检测障碍，不滑动
+    /// </summary>
+    void MoveToPathPoint(Vector3 target)
+    {
+        Vector2 direction = (target - transform.position).normalized;
+        if (direction.magnitude < 0.1f) return;
+
+        lastMovementDirection = direction;
+        Vector2 desiredPos = (Vector2)transform.position + direction * moveSpeed * Time.deltaTime;
+
+        // === 轻量碰撞检测 ===
+        // 使用较小的半径（比如 0.24f 而不是 0.25f）留出容差
+        const float radius = 0.24f;
+
+        if (Physics2D.OverlapCircle(desiredPos, radius, obstacleLayer) == null)
+        {
+            // 安全：直接移动
+            transform.position = desiredPos;
+            isMovingThisFrame = true;
+        }
+        else
+        {
+            // ⚠️ 碰撞了！可能是动态物体（如玩家、子弹）临时阻挡
+            // 哨兵应：短暂停顿 or 微调方向（但不滑动！）
+
+            // 简单策略：尝试沿路径方向“挤一格”（小步试探）
+            Vector2 smallStep = (Vector2)transform.position + direction * 0.1f;
+            if (Physics2D.OverlapCircle(smallStep, radius, obstacleLayer) == null)
+            {
+                transform.position = smallStep;
+                isMovingThisFrame = true;
+            }
+            // 否则：这一帧不动（等待障碍离开）
+            // （不会左右滑动，不会穿墙）
+        }
     }
 
     void FollowPath()
@@ -217,6 +461,30 @@ public class Enemy : MonoBehaviour
 
         Vector2 direction = (target - transform.position).normalized;
         MoveInDirection(direction);
+    }
+
+    void FollowSentryPath()
+    {
+        if (currentPathIndex >= currentPath.Count)
+        {
+            // 路径走完，靠近最终目标
+            MoveToPathPoint(sentryTargetPosition.Value);
+            return;
+        }
+
+        Vector3 target = currentPath[currentPathIndex];
+        if (Vector2.Distance(transform.position, target) < 0.4f)
+        {
+            currentPathIndex++;
+            if (currentPathIndex >= currentPath.Count)
+            {
+                MoveToPathPoint(sentryTargetPosition.Value);
+                return;
+            }
+            target = currentPath[currentPathIndex];
+        }
+
+        MoveToPathPoint(target);
     }
 
     void MoveDirectlyTowardsPlayer()
@@ -290,20 +558,28 @@ public class Enemy : MonoBehaviour
             hitTimer -= Time.deltaTime;
             if (hitTimer <= 0f)
             {
-                // 受击结束，恢复行走动画
                 isShowingHit = false;
-                // 注意：不要在这里直接设 sprite！因为可能下一帧就不移动了
-                // 我们让行走逻辑自己决定显示哪一帧
+                // 👇 关键：哨兵激活状态下，恢复为常态图
+                if (enemyType == EnemyType.Sentry && isSentryActivated)
+                {
+                    if (sentryIdleSprite != null)
+                        spriteRenderer.sprite = sentryIdleSprite;
+                    // 否则保持原样（安全兜底）
+                }
             }
-            // 受击期间保持 hitSprite 不变（无需操作）
             return;
         }
 
-        // === 以下是原行走动画逻辑 ===
+        // ===== 哨兵已激活：禁止任何动画覆盖 =====
+        if (enemyType == EnemyType.Sentry && isSentryActivated)
+        {
+            return; // 保持当前 sprite（即激活动画最后一帧）
+        }
+
+        // === 原行走动画逻辑 ===
         if (!isMovingThisFrame)
         {
-            // 可选：静止时显示默认帧（比如 walkRight）
-            // spriteRenderer.sprite = walkRight;
+            // 可选：静止时显示默认帧
             return;
         }
 
@@ -418,10 +694,25 @@ public class Enemy : MonoBehaviour
 
         currentHealth -= damage;
 
-        // 👇 新增：只要受伤（无论死不死），都尝试显示受击效果
-        if (currentHealth > 0 && hitSprite != null)
+        // 👇 根据状态决定是否显示受击效果 & 用哪张图
+        if (currentHealth > 0)
         {
-            ShowHitEffect();
+            if (enemyType == EnemyType.Sentry && isSentryActivated)
+            {
+                // 哨兵激活状态：使用 sentryHitSprite
+                if (sentryHitSprite != null)
+                {
+                    ShowHitEffect(sentryHitSprite);
+                }
+            }
+            else
+            {
+                // 普通状态：使用 hitSprite
+                if (hitSprite != null)
+                {
+                    ShowHitEffect(hitSprite);
+                }
+            }
         }
 
         if (currentHealth <= 0)
@@ -431,15 +722,15 @@ public class Enemy : MonoBehaviour
     }
 
     /// <summary>
-    /// 立即显示受击图片，并设置计时器
+    /// 显示指定的受击图片
     /// </summary>
-    void ShowHitEffect()
+    void ShowHitEffect(Sprite hitSpriteToUse)
     {
-        if (spriteRenderer == null || hitSprite == null) return;
+        if (spriteRenderer == null || hitSpriteToUse == null) return;
 
-        spriteRenderer.sprite = hitSprite;
+        spriteRenderer.sprite = hitSpriteToUse;
         isShowingHit = true;
-        hitTimer = hitFlashDuration; // 从这里开始倒计时
+        hitTimer = hitFlashDuration;
     }
 
     private bool isDead = false;

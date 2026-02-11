@@ -149,7 +149,7 @@ MonoBehaviour:
   pathUpdateInterval: 1
   obstacleLayer:
     serializedVersion: 2
-    m_Bits: 64
+    m_Bits: 192
   walkLeft: {fileID: -718602340, guid: 1b82ee0dd0639a748ad94ef20f61aaa6, type: 3}
   walkRight: {fileID: -1546475445, guid: 1b82ee0dd0639a748ad94ef20f61aaa6, type: 3}
   hitSprite: {fileID: 389901939, guid: 1b82ee0dd0639a748ad94ef20f61aaa6, type: 3}

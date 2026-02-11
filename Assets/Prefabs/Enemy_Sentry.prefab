@@ -14,7 +14,7 @@ GameObject:
   - component: {fileID: 3570451836942327210}
   - component: {fileID: -6926344824489527892}
   m_Layer: 0
-  m_Name: Enemy_Basic
+  m_Name: Enemy_Sentry
   m_TagString: Enemy
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -76,7 +76,7 @@ SpriteRenderer:
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 1
-  m_Sprite: {fileID: 331400875, guid: 1b82ee0dd0639a748ad94ef20f61aaa6, type: 3}
+  m_Sprite: {fileID: -1840497278, guid: 1b82ee0dd0639a748ad94ef20f61aaa6, type: 3}
   m_Color: {r: 0.99371064, g: 0.97808623, b: 0.97808623, a: 1}
   m_FlipX: 0
   m_FlipY: 0
@@ -150,15 +150,19 @@ MonoBehaviour:
   obstacleLayer:
     serializedVersion: 2
     m_Bits: 192
-  enemyType: 0
-  walkLeft: {fileID: 331400875, guid: 1b82ee0dd0639a748ad94ef20f61aaa6, type: 3}
-  walkRight: {fileID: 2084502580, guid: 1b82ee0dd0639a748ad94ef20f61aaa6, type: 3}
-  hitSprite: {fileID: 856741247, guid: 1b82ee0dd0639a748ad94ef20f61aaa6, type: 3}
+  enemyType: 2
+  walkLeft: {fileID: -1840497278, guid: 1b82ee0dd0639a748ad94ef20f61aaa6, type: 3}
+  walkRight: {fileID: -489634157, guid: 1b82ee0dd0639a748ad94ef20f61aaa6, type: 3}
+  hitSprite: {fileID: -1435004864, guid: 1b82ee0dd0639a748ad94ef20f61aaa6, type: 3}
   hitFlashDuration: 0.1
-  sentryActivateFrames: []
+  sentryActivateFrames:
+  - {fileID: 752652342, guid: 1b82ee0dd0639a748ad94ef20f61aaa6, type: 3}
+  - {fileID: -1767867469, guid: 1b82ee0dd0639a748ad94ef20f61aaa6, type: 3}
+  - {fileID: -373261829, guid: 1b82ee0dd0639a748ad94ef20f61aaa6, type: 3}
+  - {fileID: -742630794, guid: 1b82ee0dd0639a748ad94ef20f61aaa6, type: 3}
   sentryFrameInterval: 0.1
-  sentryHitSprite: {fileID: 0}
-  sentryIdleSprite: {fileID: 0}
+  sentryHitSprite: {fileID: -183566290, guid: 1b82ee0dd0639a748ad94ef20f61aaa6, type: 3}
+  sentryIdleSprite: {fileID: -742630794, guid: 1b82ee0dd0639a748ad94ef20f61aaa6, type: 3}
   isSentryActivated: 0
   deathFrames:
   - {fileID: -1989855200, guid: 1b82ee0dd0639a748ad94ef20f61aaa6, type: 3}
@@ -185,7 +189,7 @@ MonoBehaviour:
   - {fileID: 6155797925736656448, guid: 0c29678ecba81eb499be25e9e2308bfd, type: 3}
   - {fileID: 6155797925736656448, guid: b203469c2dd453642b11be6c1dfc5ab7, type: 3}
   - {fileID: 6155797925736656448, guid: 8d317ef5e11815b4c99c24086b97fca1, type: 3}
-  powerupWeights: 0500000005000000050000000500000005000000050000002c01000002000000
+  powerupWeights: 0500000005000000050000000500000005000000050000000300000002000000
   deathSounds:
   - {fileID: 8300000, guid: efac3891c0e37644fb1dfe578e0b8aa2, type: 3}
   - {fileID: 8300000, guid: 95905327d454b454790f6ee17e312ee3, type: 3}
