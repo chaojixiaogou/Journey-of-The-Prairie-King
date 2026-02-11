@@ -167,7 +167,80 @@ public class PlayerController : MonoBehaviour
     [Range(0f, 1f)]
     public float usePowerupVolume = 0.8f;
 
+    public bool hasTriggeredNextLevel = false; // 👈 新增字段
+
     
+
+    void Awake()
+    {
+        if (Instance == null)
+        {
+            Instance = this;
+            // PlayerController 不 DontDestroyOnLoad！每关重建
+            UnityEngine.SceneManagement.SceneManager.sceneLoaded += OnSceneLoaded;
+        }
+        else
+        {
+            Destroy(gameObject);
+            return;
+        }
+    }
+
+    void OnDestroy()
+    {
+        UnityEngine.SceneManagement.SceneManager.sceneLoaded -= OnSceneLoaded;
+    }
+    
+    private void OnSceneLoaded(UnityEngine.SceneManagement.Scene scene, UnityEngine.SceneManagement.LoadSceneMode mode)
+    {
+        if (mode == UnityEngine.SceneManagement.LoadSceneMode.Single)
+        {
+            // 重新查找出生点和箭头
+            FindSpawnPoint();
+            GameController.Instance?.SpawnExitArrowIfNeeded();
+    
+            // 重新初始化玩家状态
+            Respawn();
+            
+            // 初始化组件（安全起见）
+            rb = GetComponent<Rigidbody2D>();
+            spriteRenderer = GetComponent<SpriteRenderer>();
+            if (audioSource == null)
+            {
+                audioSource = gameObject.AddComponent<AudioSource>();
+                audioSource.playOnAwake = false;
+                audioSource.spatialBlend = 0f;
+            }
+            
+
+            GameController.Instance.ResetLevelState(); // 👈 重置状态
+        }
+    }
+
+    // 提取出生点查找逻辑
+    void FindSpawnPoint()
+    {
+        GameObject spawnObj = GameObject.FindGameObjectWithTag("PlayerSpawn");
+        if (spawnObj != null)
+        {
+            spawnPosition = spawnObj.transform.position;
+            spawnPosition.z = 0;
+        }
+        else
+        {
+            Camera cam = Camera.main;
+            if (cam != null)
+            {
+                spawnPosition = cam.ViewportToWorldPoint(new Vector3(0.5f, 0.5f, Mathf.Abs(cam.transform.position.z)));
+                spawnPosition.z = 0;
+            }
+            else
+            {
+                spawnPosition = Vector3.zero;
+            }
+            Debug.LogWarning("⚠️ 未找到 PlayerSpawn！");
+        }
+    }
 
     void Start()
     {
@@ -180,38 +253,79 @@ public class PlayerController : MonoBehaviour
 
         rb = GetComponent<Rigidbody2D>();
         spriteRenderer = GetComponent<SpriteRenderer>();
-
-        rb.bodyType = RigidbodyType2D.Kinematic;
-        rb.simulated = true;
-
-        // ✅ 设置出生点为屏幕中心（不是初始位置！）
-        Camera cam = Camera.main;
-        if (cam != null)
-        {
-            spawnPosition = cam.ViewportToWorldPoint(new Vector3(0.5f, 0.5f, Mathf.Abs(cam.transform.position.z)));
-            spawnPosition.z = 0;
-        }
-        else
-        {
-            spawnPosition = Vector3.zero;
-        }
-
-        Respawn(); // 初始化生命和状态
-
-        // 初始化默认朝右
-        if (spriteRenderer != null && rightSprite != null)
-            spriteRenderer.sprite = rightSprite;
-
-        // 初始化死亡动画专用渲染器
-        SetupDeathEffectRenderer();
-
-        // 初始化道具UI
-        UpdateHeldPowerupUI();
-
-        // ===== 初始化音效 =====
         audioSource = gameObject.AddComponent<AudioSource>();
         audioSource.playOnAwake = false;
-        audioSource.spatialBlend = 0f; // 2D 音效
+        audioSource.spatialBlend = 0f;
+
+        FindSpawnPoint(); // 必须调用！
+        Respawn();        // 必须调用！
+
+        SetupDeathEffectRenderer();
+        UpdateHeldPowerupUI();
+
+        // rb = GetComponent<Rigidbody2D>();
+        // spriteRenderer = GetComponent<SpriteRenderer>();
+
+        // rb.bodyType = RigidbodyType2D.Kinematic;
+        // rb.simulated = true;
+
+        // // 🔁 查找当前场景中名为 "PlayerSpawn" 或带 Tag 的出生点
+        // Transform spawnPoint = null;
+
+        // // 方法 1：通过 GameObject 名称查找（简单）
+        // GameObject spawnObj = GameObject.Find("PlayerSpawn");
+        // if (spawnObj != null)
+        // {
+        //     spawnPoint = spawnObj.transform;
+        // }
+        // else
+        // {
+        //     // 方法 2：通过 Tag 查找（更规范，推荐）
+        //     spawnObj = GameObject.FindGameObjectWithTag("PlayerSpawn");
+        //     if (spawnObj != null)
+        //     {
+        //         spawnPoint = spawnObj.transform;
+        //     }
+        // }
+
+        // // 设置出生位置
+        // if (spawnPoint != null)
+        // {
+        //     spawnPosition = spawnPoint.position;
+        //     spawnPosition.z = 0; // 确保 Z=0（2D 游戏）
+        // }
+        // else
+        // {
+        //     // 备用方案：如果没找到，用屏幕中心（调试用）
+        //     Camera cam = Camera.main;
+        //     if (cam != null)
+        //     {
+        //         spawnPosition = cam.ViewportToWorldPoint(new Vector3(0.5f, 0.5f, Mathf.Abs(cam.transform.position.z)));
+        //         spawnPosition.z = 0;
+        //     }
+        //     else
+        //     {
+        //         spawnPosition = Vector3.zero;
+        //     }
+        //     Debug.LogWarning("⚠️ 未找到 PlayerSpawn！请在场景中创建一个名为 'PlayerSpawn' 的空物体，并设置 Tag 为 'PlayerSpawn'");
+        // }
+
+        // Respawn(); // 初始化生命和状态
+
+        // // 初始化默认朝右
+        // if (spriteRenderer != null && rightSprite != null)
+        //     spriteRenderer.sprite = rightSprite;
+
+        // // 初始化死亡动画专用渲染器
+        // SetupDeathEffectRenderer();
+
+        // // 初始化道具UI
+        // UpdateHeldPowerupUI();
+
+        // // ===== 初始化音效 =====
+        // audioSource = gameObject.AddComponent<AudioSource>();
+        // audioSource.playOnAwake = false;
+        // audioSource.spatialBlend = 0f; // 2D 音效
     }
 
     void Update()
@@ -279,6 +393,13 @@ public class PlayerController : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.Space) && heldPowerup.HasValue)
         {
             UseHeldPowerup();
+        }
+
+        // 进入下一关检测
+        if (!hasTriggeredNextLevel && transform.position.y <= GameController.Instance.mapBottomY)
+        {
+            hasTriggeredNextLevel = true; // 🔒 锁住，防止重复触发
+            GameController.Instance.OnPlayerReachBottom();
         }
     }
 
@@ -458,6 +579,11 @@ public class PlayerController : MonoBehaviour
         if (isDead || isPlayingDeathAnim || isInvincible) return;
 
         currentLives -= damage;
+
+        // ✅ 同步到 GameController
+        if (GameController.Instance != null)
+            GameController.Instance.persistentLives = currentLives;
+
         OnLivesChanged?.Invoke();
 
         if (currentLives <= 0)
@@ -617,6 +743,8 @@ public class PlayerController : MonoBehaviour
 
         // 清空持有状态
         heldPowerup = null;
+        if (GameController.Instance != null)
+            GameController.Instance.persistentHeldPowerup = heldPowerup;
         UpdateHeldPowerupUI();
         OnPowerupChanged?.Invoke(heldPowerup);
     }
@@ -680,9 +808,32 @@ public class PlayerController : MonoBehaviour
 
     void Respawn()
     {
-        currentLives = maxLives;
+        // ✅ 从 GameController 恢复持久化状态
+        if (GameController.Instance != null)
+        {
+            currentLives = GameController.Instance.persistentLives;
+            heldPowerup = GameController.Instance.persistentHeldPowerup;
+        }
+        else
+        {
+            currentLives = maxLives; // 安全兜底
+            heldPowerup = null;
+        }
+
         isInvincible = false;
         isDead = false;
+
+        // ✅ 关键修复：确保 rb 不为 null
+        if (rb == null)
+        {
+            rb = GetComponent<Rigidbody2D>();
+            if (rb == null)
+            {
+                Debug.LogError("Player 缺少 Rigidbody2D 组件！");
+                return; // 安全退出，避免崩溃
+            }
+        }
+        
         rb.simulated = true;
         transform.position = spawnPosition;
 
@@ -692,8 +843,9 @@ public class PlayerController : MonoBehaviour
             spriteRenderer.sprite = rightSprite;
         }
 
-        // 👇 触发 UI 更新
         OnLivesChanged?.Invoke();
+        UpdateHeldPowerupUI();
+        OnPowerupChanged?.Invoke(heldPowerup);
     }
 
     void SetupDeathEffectRenderer()
@@ -718,6 +870,10 @@ public class PlayerController : MonoBehaviour
         currentLives += amount; // 直接加，无上限！
         Debug.Log($"❤️ 玩家回复 {amount} 点生命，当前: {currentLives} (无上限)");
 
+        // ✅ 同步到 GameController
+        if (GameController.Instance != null)
+            GameController.Instance.persistentLives = currentLives;
+
         // 可选：触发 UI 更新（如果你的 UI 显示当前生命）
         OnLivesChanged?.Invoke();
     }
@@ -729,6 +885,10 @@ public class PlayerController : MonoBehaviour
     {
         heldPowerup = type;
         Debug.Log($"📦 拾取道具: {type}");
+
+        // ✅ 同步
+        if (GameController.Instance != null)
+            GameController.Instance.persistentHeldPowerup = heldPowerup;
 
         // 🔊 播放道具拾取音效
         if (audioSource != null && pickupPowerupSound != null)

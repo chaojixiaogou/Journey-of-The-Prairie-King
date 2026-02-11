@@ -26,6 +26,9 @@ public class EnemySpawner : MonoBehaviour
     private bool isPaused = false;
     private Coroutine spawnCoroutine;
 
+    [Header("初始延迟")]
+    public float initialDelay = 2f; // 默认延迟 2 秒，可在 Inspector 调整
+
     void Start()
     {
         GenerateSpawnPoints();
@@ -51,6 +54,13 @@ public class EnemySpawner : MonoBehaviour
 
     System.Collections.IEnumerator SpawnLoop()
     {
+        // ✅ 新增：初始延迟
+        if (initialDelay > 0)
+        {
+            Debug.Log($"[EnemySpawner] 等待 {initialDelay} 秒后开始生成敌人...");
+            yield return new WaitForSeconds(initialDelay);
+        }
+        
         while (true)
         {
             if (isPaused)
@@ -115,4 +125,9 @@ public class EnemySpawner : MonoBehaviour
 
     public void Pause() => isPaused = true;
     public void Resume() => isPaused = false;
+
+    public void StopSpawning()
+    {
+        StopAllCoroutines(); // 或设置 isSpawning = false
+    }
 }

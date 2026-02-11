@@ -3163,7 +3163,7 @@ TextureImporter:
         width: 16
         height: 16
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       outline: []
       physicsShape: []
@@ -3171,6 +3171,27 @@ TextureImporter:
       bones: []
       spriteID: 120ba42b570f8d74f816a0dfd32c1985
       internalID: -309065930
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: prairie_king_spritesheet_146
+      rect:
+        serializedVersion: 2
+        x: 224
+        y: 65
+        width: 12
+        height: 12
+      alignment: 9
+      pivot: {x: 0.5, y: 0.48119545}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: fed271451e2b1be439992b29ad7aa0d8
+      internalID: -1135200657
       vertices: []
       indices: 
       edges: []
@@ -3239,6 +3260,7 @@ TextureImporter:
       prairie_king_spritesheet_143: 1538443925
       prairie_king_spritesheet_144: 389901939
       prairie_king_spritesheet_145: -309065930
+      prairie_king_spritesheet_146: -1135200657
       prairie_king_spritesheet_15: -868797334
       prairie_king_spritesheet_16: 1790818428
       prairie_king_spritesheet_17: 513888358

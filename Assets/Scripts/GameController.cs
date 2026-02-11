@@ -1,6 +1,7 @@
 // GameController.cs（完整修改版）
 using UnityEngine;
 using System.Collections;
+using System.Linq;
 
 public class GameController : MonoBehaviour
 {
@@ -14,6 +15,14 @@ public class GameController : MonoBehaviour
     private float currentTime;
     private bool isLevelTimerActive = false;
 
+    // 🔥 新增：通关控制
+    public Transform player; // Inspector 拖入玩家
+    public float mapBottomY = -6f; // 根据你的地图调整
+    public GameObject exitArrow; // 向下箭头提示（可选）
+
+    private bool hasClearedAllEnemies = false;
+    private bool isRoundCompleted = false;
+
     [Header("金币系统")]
     private static int totalCoins = 0;
     public static int TotalCoins => totalCoins;
@@ -25,7 +34,18 @@ public class GameController : MonoBehaviour
     public static System.Action<float, float> OnLevelTimeUpdated;   // (当前时间, 总时间)
     public static System.Action OnLevelTimeFinished;               // 倒计时结束
 
+    public static System.Action OnAllEnemiesDefeated;
+    public static System.Action OnLevelComplete;
+
     private bool isRespawning = false;
+    
+    // ===== 持久化玩家状态（跨关卡）=====
+    public int persistentLives = 3; // 初始3条命
+    public PowerupType? persistentHeldPowerup = null;
+
+    [Header("Exit Arrow 设置")]
+    public GameObject exitArrowPrefab; // 拖入你的 ExitArrow.prefab
+    private GameObject spawnedExitArrow; // 动态生成的实例
 
     void Awake()
     {
@@ -33,6 +53,13 @@ public class GameController : MonoBehaviour
         {
             Instance = this;
             DontDestroyOnLoad(gameObject);
+
+            // 🔑 关键修复：强制初始化持久化状态为默认值
+            persistentLives = 3;
+            persistentHeldPowerup = null;
+
+            // 可选：如果你有“继续游戏”功能，可以用 PlayerPrefs 判断是否加载存档
+            // 否则每次都从默认状态开始
         }
         else
         {
@@ -43,16 +70,25 @@ public class GameController : MonoBehaviour
     void Start()
     {
         StartLevelTimer();
+        HideExitArrow();
     }
 
     /// <summary>
     /// 启动关卡倒计时
     /// </summary>
+    private Coroutine countdownCoroutine;
+
     public void StartLevelTimer()
     {
+        // 停止旧协程
+        if (countdownCoroutine != null)
+        {
+            StopCoroutine(countdownCoroutine);
+        }
+
         currentTime = levelTime;
         isLevelTimerActive = true;
-        StartCoroutine(LevelCountdown());
+        countdownCoroutine = StartCoroutine(LevelCountdown());
     }
 
     /// <summary>
@@ -115,17 +151,113 @@ public class GameController : MonoBehaviour
         if (currentTime <= 0)
         {
             OnLevelTimeFinished?.Invoke(); // 通知：玩家通关！
-            HandleLevelComplete();
+            HandleRoundEnd();
         }
     }
 
-    void HandleLevelComplete()
+    void HandleRoundEnd()
     {
-        Debug.Log("🎉 关卡时间到！玩家通关！");
-        // TODO: 加载下一关 或 显示胜利界面
-        // 例如：
-        // UnityEngine.SceneManagement.SceneManager.LoadScene("WinScene");
+        isLevelTimerActive = false;
+        foreach (var spawner in FindObjectsOfType<EnemySpawner>())
+            spawner.StopSpawning(); // ⚠️ 确保 EnemySpawner 有这个方法
+
+        // ShowExitArrow();
+        StartCoroutine(CheckEnemiesClearance());
     }
+
+    IEnumerator CheckEnemiesClearance()
+    {
+        while (!hasClearedAllEnemies)
+        {
+            yield return new WaitForSeconds(0.3f);
+
+            // 只统计 active 且 enabled 的敌人
+            var enemies = FindObjectsOfType<Enemy>();
+            bool foundAlive = false;
+            foreach (var e in enemies)
+            {
+                if (e != null && e.gameObject.activeInHierarchy)
+                {
+                    foundAlive = true;
+                    break;
+                }
+            }
+
+            if (!foundAlive)
+            {
+                hasClearedAllEnemies = true;
+                isRoundCompleted = true;
+                OnAllEnemiesDefeated?.Invoke();
+                Debug.Log("✅ 所有敌人已清除！");
+
+                ShowExitArrow();
+            }
+        }
+    }
+
+    public void OnPlayerReachBottom()
+    {
+        if (isRoundCompleted)
+            OnLevelComplete?.Invoke();
+    }
+
+    public void ShowExitArrow()
+    {
+        Debug.Log($"🔍 ShowExitArrow() 被调用，堆栈：\n{System.Environment.StackTrace}");
+        if (spawnedExitArrow != null)
+        {
+            spawnedExitArrow.SetActive(true);
+        }
+        else
+        {
+            // 如果还没生成，现在生成并显示
+            SpawnExitArrowIfNeeded();
+            if (spawnedExitArrow != null)
+                spawnedExitArrow.SetActive(true);
+        }
+    }
+
+    public void HideExitArrow()
+    {
+        if (spawnedExitArrow != null)
+        {
+            spawnedExitArrow.SetActive(false);
+        }
+    }
+
+    /// <summary>
+    /// 在当前关卡底部生成 ExitArrow（如果尚未生成）
+    /// </summary>
+    public void SpawnExitArrowIfNeeded()
+    {
+        if (spawnedExitArrow != null) return; // 已存在，不重复生成
+
+        if (exitArrowPrefab == null)
+        {
+            Debug.LogError("❌ ExitArrow Prefab 未指定！");
+            return;
+        }
+
+        // 计算生成位置：屏幕底部中央（世界坐标）
+        Camera mainCam = Camera.main;
+        if (mainCam == null)
+        {
+            Debug.LogWarning("⚠️ 未找到主相机，使用默认位置");
+            spawnedExitArrow = Instantiate(exitArrowPrefab, new Vector3(0, mapBottomY, 0), Quaternion.identity);
+        }
+        else
+        {
+            // 将屏幕底部中央转换为世界坐标
+            Vector3 screenBottomCenter = new Vector3(Screen.width / 2f, 250f, mainCam.nearClipPlane); // 略高于底部
+            Vector3 worldPos = mainCam.ScreenToWorldPoint(screenBottomCenter);
+            worldPos.z = 0; // 2D 游戏通常 z=0
+            spawnedExitArrow = Instantiate(exitArrowPrefab, worldPos, Quaternion.identity);
+        }
+
+        spawnedExitArrow.SetActive(false); // 初始隐藏
+        Debug.Log($"✅ 动态生成 ExitArrow at {spawnedExitArrow.transform.position}");
+    }
+
 
     public void OnPlayerLoseLife(System.Action onRespawnCallback)
     {
@@ -146,5 +278,27 @@ public class GameController : MonoBehaviour
         }
 
         isRespawning = false;
+    }
+
+    public void ResetLevelState()
+    {
+        hasClearedAllEnemies = false;
+        isRoundCompleted = false;
+        isLevelTimerActive = false;
+
+        // ✅ 新增：重置玩家的关卡触发标志
+        if (PlayerController.Instance != null)
+        {
+            PlayerController.Instance.hasTriggeredNextLevel = false;
+        }
+
+        // 停止任何旧协程
+        if (countdownCoroutine != null)
+        {
+            StopCoroutine(countdownCoroutine);
+            countdownCoroutine = null;
+        }
+
+        HideExitArrow(); // 确保隐藏
     }
 }
