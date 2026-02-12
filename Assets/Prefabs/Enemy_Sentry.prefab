@@ -75,7 +75,7 @@ SpriteRenderer:
   m_LightmapParameters: {fileID: 0}
   m_SortingLayerID: 0
   m_SortingLayer: 0
-  m_SortingOrder: 1
+  m_SortingOrder: 2
   m_Sprite: {fileID: -1840497278, guid: 1b82ee0dd0639a748ad94ef20f61aaa6, type: 3}
   m_Color: {r: 0.99371064, g: 0.97808623, b: 0.97808623, a: 1}
   m_FlipX: 0
@@ -164,6 +164,13 @@ MonoBehaviour:
   sentryHitSprite: {fileID: -183566290, guid: 1b82ee0dd0639a748ad94ef20f61aaa6, type: 3}
   sentryIdleSprite: {fileID: -742630794, guid: 1b82ee0dd0639a748ad94ef20f61aaa6, type: 3}
   isSentryActivated: 0
+  bossType: 0
+  bossSpawnPosition: {x: 0, y: -6}
+  bossMovingFrames: []
+  bossIdleFrames: []
+  bossAnimInterval: 0.2
+  bulletPrefab: {fileID: 0}
+  shootInterval: 0.8
   deathFrames:
   - {fileID: -1989855200, guid: 1b82ee0dd0639a748ad94ef20f61aaa6, type: 3}
   - {fileID: -1372684459, guid: 1b82ee0dd0639a748ad94ef20f61aaa6, type: 3}

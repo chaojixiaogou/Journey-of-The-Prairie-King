@@ -75,7 +75,7 @@ SpriteRenderer:
   m_LightmapParameters: {fileID: 0}
   m_SortingLayerID: 0
   m_SortingLayer: 0
-  m_SortingOrder: 1
+  m_SortingOrder: 2
   m_Sprite: {fileID: -1561786523, guid: 1b82ee0dd0639a748ad94ef20f61aaa6, type: 3}
   m_Color: {r: 0.9811321, g: 0.9595348, b: 0.9595348, a: 1}
   m_FlipX: 0
@@ -146,6 +146,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   damage: 25
   speed: 10
+  isFromBoss: 0
   bulletWallLayer:
     serializedVersion: 2
     m_Bits: 128

@@ -240,6 +240,9 @@ public class PlayerController : MonoBehaviour
             }
             Debug.LogWarning("⚠️ 未找到 PlayerSpawn！");
         }
+
+        // ✅ 初始化当前重生点为默认点
+        currentRespawnPosition = spawnPosition;
     }
 
     void Start()
@@ -610,7 +613,11 @@ public class PlayerController : MonoBehaviour
         Enemy[] enemies = FindObjectsOfType<Enemy>();
         foreach (Enemy enemy in enemies)
         {
-            Destroy(enemy.gameObject);
+            // ✅ 只销毁非 Boss 敌人
+            if (enemy.enemyType != EnemyType.Boss)
+            {
+                Destroy(enemy.gameObject);
+            }
         }
 
         // 2. ✅ 清除所有 Collectible 道具（金币、心、未来道具）
@@ -662,7 +669,7 @@ public class PlayerController : MonoBehaviour
             {
                 Vector3 center = cam.ViewportToWorldPoint(new Vector3(0.5f, 0.5f, Mathf.Abs(cam.transform.position.z)));
                 center.z = 0;
-                transform.position = center;
+                transform.position = currentRespawnPosition;
             }
 
             isPlayingDeathAnim = false;
@@ -689,8 +696,30 @@ public class PlayerController : MonoBehaviour
     void UseHeldPowerup()
     {
         if (!heldPowerup.HasValue) return;
-
+    
         PowerupType type = heldPowerup.Value;
+        bool isInBossBattle = IsInBossBattle(); // 👈 新增：检测 Boss 战
+    
+        // ===== 特殊处理：Boss 战中禁用某些道具 =====
+        bool isDisabledInBossBattle = isInBossBattle && (
+            type == PowerupType.Nuke ||
+            type == PowerupType.SmokeGrenade ||
+            type == PowerupType.Tombstone
+        );
+    
+        if (isDisabledInBossBattle)
+        {
+            Debug.Log($"⚠️ 道具 {type} 在 Boss 战中被禁用！");
+            // 但仍要清除道具（模拟“使用了但无效”）
+            heldPowerup = null;
+            if (GameController.Instance != null)
+                GameController.Instance.persistentHeldPowerup = heldPowerup;
+            UpdateHeldPowerupUI();
+            OnPowerupChanged?.Invoke(heldPowerup);
+            return; // 👈 直接返回，不执行后续效果
+        }
+    
+        // ===== 原有逻辑继续 =====
         float now = Time.time;
         Debug.Log($"✨ 使用道具: {type}");
 
@@ -721,10 +750,11 @@ public class PlayerController : MonoBehaviour
                 badgeEndTime = now + BADGE_DURATION;
                 Debug.Log("🎖️ 警徽激活！");
                 break;
+
             case PowerupType.Nuke:
                 UseNuke();
                 break;
-            
+
             case PowerupType.SmokeGrenade:
                 PlayUsePowerupSound(type);
                 UseSmokeGrenade();
@@ -735,18 +765,35 @@ public class PlayerController : MonoBehaviour
                 UseTombstone();
                 break;
 
-            // 其他道具暂不处理
             default:
                 Debug.LogWarning($"道具 {type} 的效果尚未实现");
                 break;
         }
 
-        // 清空持有状态
+        // 清空持有状态（正常流程）
         heldPowerup = null;
         if (GameController.Instance != null)
             GameController.Instance.persistentHeldPowerup = heldPowerup;
         UpdateHeldPowerupUI();
         OnPowerupChanged?.Invoke(heldPowerup);
+    }
+
+    /// <summary>
+    /// 判断当前场景中是否存在存活的 Boss
+    /// </summary>
+    bool IsInBossBattle()
+    {
+        Enemy[] enemies = FindObjectsOfType<Enemy>();
+        foreach (Enemy enemy in enemies)
+        {
+            if (enemy != null && 
+                !enemy.IsDead && 
+                enemy.enemyType == EnemyType.Boss)
+            {
+                return true;
+            }
+        }
+        return false;
     }
 
     private void PlayUsePowerupSound(PowerupType type)
@@ -835,13 +882,16 @@ public class PlayerController : MonoBehaviour
         }
         
         rb.simulated = true;
-        transform.position = spawnPosition;
+        transform.position = currentRespawnPosition;
 
         if (spriteRenderer != null)
         {
             spriteRenderer.enabled = true;
             spriteRenderer.sprite = rightSprite;
         }
+
+        // 重生后重置为默认点
+        // currentRespawnPosition = spawnPosition;
 
         OnLivesChanged?.Invoke();
         UpdateHeldPowerupUI();
@@ -1280,6 +1330,17 @@ public class PlayerController : MonoBehaviour
                     audioSource.PlayOneShot(pickupPowerupSound, pickupVolume);
                 break;
         }
+    }
+
+    // ===== 新增：支持动态重生点 =====
+    private Vector3 currentRespawnPosition; // 当前生效的重生点
+
+    /// <summary>
+    /// 设置下一次重生的位置（例如被 Boss 击中后）
+    /// </summary>
+    public void SetRespawnPosition(Vector2 position)
+    {
+        currentRespawnPosition = position;
     }
 
     IEnumerator PlayGameOverAnimation()

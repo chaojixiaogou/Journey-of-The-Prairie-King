@@ -7,6 +7,9 @@ public class Bullet : MonoBehaviour
     public float speed = 8f;
     private Vector2 direction;
 
+    // 👇 新增：标记是否来自 Boss
+    public bool isFromBoss = false;
+
     private static readonly float MAP_LEFT = -8f;
     private static readonly float MAP_RIGHT = 8f;
     private static readonly float MAP_TOP = 8f;
@@ -60,11 +63,32 @@ public class Bullet : MonoBehaviour
     {
         if (other.CompareTag("Enemy"))
         {
+            
             Enemy enemy = other.GetComponent<Enemy>();
-            if (enemy != null)
+            if(!isFromBoss){
+                if (enemy != null)
+                {
+                    enemy.TakeDamage(damage);
+                    Destroy(gameObject); // 击中后消失
+                }
+            }
+        }
+        // 👇 新增：打到玩家
+        else if (other.CompareTag("Player") && isFromBoss)
+        {
+            PlayerController player = other.GetComponent<PlayerController>();
+            if (player != null)
             {
-                enemy.TakeDamage(damage);
-                Destroy(gameObject); // 击中后消失
+                player.TakeDamage(1);
+
+                // ✅ 如果是 Boss 子弹，设置特殊重生点
+                if (isFromBoss)
+                {
+                    // 地图中心偏上：比如 (0, 6)
+                    player.SetRespawnPosition(new Vector2(0f, 5f));
+                }
+
+                Destroy(gameObject); // 子弹消失
             }
         }
     }

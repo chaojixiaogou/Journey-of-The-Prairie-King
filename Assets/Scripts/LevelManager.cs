@@ -9,9 +9,15 @@ public class LevelManager : MonoBehaviour
 
     [Header("黑屏过渡")]
     public float fadeDuration = 1.0f;
+    private Image fadeImage; // 👈 新增字段
 
     [Header("地图重置（单场景复用模式）")]
     public bool useSingleScene = false;
+
+    [Header("关卡配置")]
+    public int[] bossLevelIndices; // 在 Inspector 中填写哪些 Build Index 是 Boss 关卡（从 0 开始）
+
+    // 示例：如果你的 Boss 在第 2 关和第 5 关（Build Settings 中索引为 1 和 4），就填 [1, 4]
 
     // 🔥 不再需要 public GameObject fadePanel;
     private GameObject fadePanel;
@@ -48,14 +54,16 @@ public class LevelManager : MonoBehaviour
 
         canvasObj.AddComponent<GraphicRaycaster>(); // 防止阻挡 UI 交互（过渡期可忽略）
 
-        // 2. 创建全屏黑色 Image
+        // 2. 创建全屏 Image（初始为黑色，兼容原有黑屏逻辑）
         GameObject imageObj = new GameObject("FadePanel");
         imageObj.transform.SetParent(canvasObj.transform, false);
-        Image image = imageObj.AddComponent<Image>();
-        image.color = Color.black;
+
+        // 👇 关键：保存 Image 引用到成员变量
+        fadeImage = imageObj.AddComponent<Image>();
+        fadeImage.color = Color.black; // 初始为黑色
 
         // 拉满全屏
-        RectTransform rect = image.rectTransform;
+        RectTransform rect = fadeImage.rectTransform;
         rect.anchorMin = Vector2.zero;
         rect.anchorMax = Vector2.one;
         rect.offsetMin = Vector2.zero;
@@ -65,11 +73,64 @@ public class LevelManager : MonoBehaviour
         fadeCanvasGroup = canvasObj.AddComponent<CanvasGroup>();
         fadeCanvasGroup.alpha = 0f; // 初始透明
 
-        // 4. 关键：防止被场景切换销毁！
+        // 4. 防止被场景切换销毁
         DontDestroyOnLoad(canvasObj);
 
-        // 5. 保存引用
+        // 5. 保存引用（fadePanel 可选，但建议保留）
         fadePanel = canvasObj;
+    }
+
+    /// <summary>
+    /// 执行白色闪光过渡：淡入白 → 全白时执行 action → 淡出
+    /// </summary>
+    public void StartWhiteFlashTransition(System.Action onFullWhite = null)
+    {
+        StartCoroutine(WhiteFlashRoutine(onFullWhite));
+    }
+
+    IEnumerator WhiteFlashRoutine(System.Action onFullWhite = null)
+    {
+        // 1. 切换为白色
+        fadeImage.color = Color.white;
+
+        // 2. 淡入到全白
+        yield return FadeTo(1f, fadeDuration);
+
+        // 3. 全白瞬间：执行地图切换等操作
+        onFullWhite?.Invoke();
+
+        // 4. 淡出恢复
+        yield return FadeTo(0f, fadeDuration);
+
+        // 5. （可选）恢复为黑色，避免影响后续黑屏过渡
+        fadeImage.color = Color.black;
+    }
+
+    public void ResetOrChangeTilemap()
+    {
+        // 查找两个地图对象（建议通过名字或标签，这里用名字）
+        GameObject oldGrid = GameObject.Find("Grid");
+        GameObject newGrid = GameObject.Find("Grid_new");
+
+        if (oldGrid != null)
+        {
+            oldGrid.SetActive(false);
+            Debug.Log("🗺️ 原地图 'Grid' 已停用。");
+        }
+        else
+        {
+            Debug.LogWarning("⚠️ 未找到名为 'Grid' 的地图对象！");
+        }
+
+        if (newGrid != null)
+        {
+            newGrid.SetActive(true);
+            Debug.Log("🗺️ 新地图 'Grid_new' 已激活。");
+        }
+        else
+        {
+            Debug.LogWarning("⚠️ 未找到名为 'Grid_new' 的地图对象！");
+        }
     }
 
     void Start()
@@ -109,7 +170,19 @@ public class LevelManager : MonoBehaviour
         // 👇 新增：重新绑定 exitArrow
         GameController.Instance.SpawnExitArrowIfNeeded();
 
-        GameController.Instance.StartLevelTimer();
+        // ✅ 新逻辑：根据关卡类型决定
+        int currentSceneIndex = UnityEngine.SceneManagement.SceneManager.GetActiveScene().buildIndex;
+
+        bool isBossLevel = System.Array.IndexOf(bossLevelIndices, currentSceneIndex) >= 0;
+
+        if (isBossLevel)
+        {
+            GameController.Instance.StartBossLevel(); // 无倒计时
+        }
+        else
+        {
+            GameController.Instance.StartLevelTimer(); // 正常倒计时
+        }
     }
 
     IEnumerator FadeTo(float targetAlpha, float duration)

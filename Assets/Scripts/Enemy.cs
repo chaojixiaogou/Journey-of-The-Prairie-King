@@ -6,8 +6,14 @@ public enum EnemyType
 {
     Normal,      // 普通敌人（A* 寻路）
     Ghost,        // 幽灵（穿墙，直线追击）
-    Sentry       // 新增：哨兵（移动到随机点后静止+强化）
+    Sentry,       // 新增：哨兵（移动到随机点后静止+强化）
+    Boss // 👈 新增 Boss 类型
     // 未来可加：Zombie, Boss, Kamikaze...
+}
+
+public enum BossType
+{
+    Cowboy // 未来可加：Alien, Tank, etc.
 }
 
 [RequireComponent(typeof(Rigidbody2D))]
@@ -56,6 +62,51 @@ public class Enemy : MonoBehaviour
     private bool sentryPathComputed = false; // 是否已计算路径
 
     private Vector3? sentryTargetPosition = null; // 哨兵的目标点（Nullable）
+
+    [Header("=== Boss 配置 ===")]
+    public BossType bossType = BossType.Cowboy;
+
+    // Cowboy 专用
+    public Vector2 bossSpawnPosition = new Vector2(0f, -6f); // 掩体后位置（地图中心偏下）
+
+    // 动画资源
+    public Sprite[] bossMovingFrames;   // [0]=左脚, [1]=右脚（移动时循环）
+    public Sprite[] bossIdleFrames;     // [0]=静止A, [1]=静止B（静止时循环）
+    public float bossAnimInterval = 0.2f;
+
+    // 射击相关
+    public GameObject bulletPrefab;     // 拖入子弹 Prefab
+    public float shootInterval = 0.8f; // 射击间隔
+    private float lastShootTime = -999f;
+
+    // 行为状态
+    private enum CowboyState
+    {
+        AtCover,                // 在掩体后（初始/结束状态）
+        MovingToEdge,           // 正在移动到地图边缘（左或右）
+        MovingAcrossMap,        // 从一端横穿到另一端
+        PausingAtSide,          // 停在掩体侧边（-2 或 +2）
+        ReturningToCover,       // 返回掩体中心
+        PeekShooting            // 闪身射击模式（技能3）
+    }
+    private CowboyState cowboyState = CowboyState.AtCover;
+    private float stateTimer = 0f;
+    private bool isShooting = false;
+    private Vector2 targetPosition = Vector2.zero;
+
+    // 掩体位置（固定）
+    private static readonly Vector2 COVER_LEFT = new Vector2(-2f, -6f);
+    private static readonly Vector2 COVER_RIGHT = new Vector2(2f, -6f);
+    private static readonly Vector2 COVER_CENTER = new Vector2(0f, -6f);
+
+    // 地图边界
+    private const float MAP_HALF_WIDTH = 8f; // 地图 -7.5 ~ +7.5
+
+    // ===== Boss 技能路径控制 =====
+    private Vector2[] bossSkillPath;          // 当前技能的路径点序列
+    private int bossSkillPathIndex = 0;       // 👈 专用索引，不与 currentPathIndex 冲突
+    private bool isExecutingBossSkill = false;
+    private int peekShootCount = 0;
 
     // === 方向缓存（用于移动，非动画）===
     private Vector2 lastMovementDirection = Vector2.right;
@@ -135,29 +186,37 @@ public class Enemy : MonoBehaviour
         }
         
 
-        // 幽灵不需要初始化路径系统
-        if (enemyType != EnemyType.Ghost)
-        {
-            // ===== 哨兵特殊初始化 =====
-            if (enemyType == EnemyType.Sentry)
-            {
-                EnsureNotInsideObstacle();
-                FindRandomValidSentryPosition();
+        // ===== 根据类型初始化 =====
+    if (enemyType == EnemyType.Boss && bossType == BossType.Cowboy)
+    {
+        // 强制设置出生位置（覆盖场景中的位置）
+        transform.position = bossSpawnPosition;
+        lastPosition = transform.position;
 
-                // 👇 立即计算一次路径（只做一次！）
-                if (sentryTargetPosition.HasValue)
-                {
-                    currentPath = FindPath(transform.position, sentryTargetPosition.Value);
-                    currentPathIndex = 0;
-                    sentryPathComputed = true;
-                    lastPathUpdateTime = Time.time; // 仅用于调试或卡死检测
-                }
-            }
-            else
-            {
-                EnsureNotInsideObstacle();
-            }
+        // 初始化 Boss 状态
+        cowboyState = CowboyState.AtCover;
+        stateTimer = 0f;
+        isShooting = false;
+
+        // 设置初始贴图
+        if (bossIdleFrames != null && bossIdleFrames.Length >= 2)
+            spriteRenderer.sprite = bossIdleFrames[0];
+    }
+    else if (enemyType == EnemyType.Sentry)
+    {
+        EnsureNotInsideObstacle();
+        FindRandomValidSentryPosition();
+        if (sentryTargetPosition.HasValue)
+        {
+            currentPath = FindPath(transform.position, sentryTargetPosition.Value);
+            currentPathIndex = 0;
+            sentryPathComputed = true;
         }
+    }
+    else if (enemyType != EnemyType.Ghost)
+    {
+        EnsureNotInsideObstacle();
+    }
         lastPosition = transform.position;
 
         // 初始化第一帧动画
@@ -271,6 +330,9 @@ public class Enemy : MonoBehaviour
             case EnemyType.Sentry:
                 RunSentryAI();
                 break;
+            case EnemyType.Boss:
+                RunBossAI();
+                return;
             default:
                 RunNormalAI(); // 安全兜底
                 break;
@@ -485,6 +547,244 @@ public class Enemy : MonoBehaviour
         }
 
         MoveToPathPoint(target);
+    }
+
+    void RunBossAI()
+    {
+        if (bossType != BossType.Cowboy) return;
+
+        stateTimer += Time.deltaTime;
+
+        switch (cowboyState)
+        {
+            case CowboyState.AtCover:
+                UpdateBossAnimation(false);
+                if (stateTimer > 1f)
+                {
+                    ChooseRandomAction();
+                }
+                break;
+
+            case CowboyState.MovingToEdge:
+            case CowboyState.MovingAcrossMap:
+                MoveTowards(bossSkillPath[bossSkillPathIndex]);
+                UpdateBossAnimation(true);
+                if (isShooting && Time.time - lastShootTime > shootInterval)
+                {
+                    ShootUpward();
+                }
+                if (Vector2.Distance(transform.position, bossSkillPath[bossSkillPathIndex]) < 0.4f)
+                {
+                    bossSkillPathIndex++;
+                    if (bossSkillPathIndex < bossSkillPath.Length)
+                    {
+                        // 还有下一个点：继续横穿
+                        cowboyState = CowboyState.MovingAcrossMap;
+                    }
+                    else
+                    {
+                        // 路径走完：进入暂停状态
+                        EnterPauseState();
+                    }
+                }
+                break;
+
+            case CowboyState.PausingAtSide:
+                UpdateBossAnimation(false);
+                if (!isShooting && stateTimer > 1.5f)
+                {
+                    ReturnToCover();
+                }
+                break;
+
+            case CowboyState.ReturningToCover:
+                MoveTowards(COVER_CENTER);
+                UpdateBossAnimation(true);
+                if (Vector2.Distance(transform.position, COVER_CENTER) < 0.4f)
+                {
+                    cowboyState = CowboyState.AtCover;
+                    stateTimer = 0f;
+                    isShooting = false;
+                }
+                break;
+
+            case CowboyState.PeekShooting:
+                // 由协程控制，这里不做逻辑
+                UpdateBossAnimation(false);
+                break;
+        }
+    }
+
+    void ChooseRandomAction()
+    {
+        int choice = Random.Range(0, 3);
+        stateTimer = 0f;
+
+        switch (choice)
+        {
+            case 0: // 技能1：右 → 左 → 停左 → 回
+                bossSkillPath = new Vector2[]
+                {
+                    new Vector2(MAP_HALF_WIDTH, -6f),   // 右边缘
+                    new Vector2(-MAP_HALF_WIDTH, -6f),  // 左边缘
+                    new Vector2(-3f, -6f)               // 掩体左侧
+                };
+                // isMovingAlongPath = true;
+                bossSkillPathIndex = 0;
+                cowboyState = CowboyState.MovingToEdge;
+                isShooting = true;
+                break;
+
+            case 1: // 技能2：左 → 右 → 停右 → 回
+                bossSkillPath = new Vector2[]
+                {
+                    new Vector2(-MAP_HALF_WIDTH, -6f),  // 左边缘
+                    new Vector2(MAP_HALF_WIDTH, -6f),   // 右边缘
+                    new Vector2(3f, -6f)                // 掩体右侧
+                };
+                // isMovingAlongPath = true;
+                bossSkillPathIndex = 0;
+                cowboyState = CowboyState.MovingToEdge;
+                isShooting = true;
+                break;
+
+            case 2: // 技能3：闪身6枪
+                peekShootCount = 0;
+                cowboyState = CowboyState.PeekShooting;
+                isShooting = false; // 射击由协程控制
+                StartCoroutine(DoPeekShootSequence());
+                break;
+        }
+    }
+
+    IEnumerator DoPeekShootSequence()
+    {
+        for (int i = 0; i < 3; i++)
+        {
+            // 闪到右侧
+            yield return MoveToAndShoot(new Vector2(3f, -6f));
+            // 闪到左侧
+            yield return MoveToAndShoot(new Vector2(-3f, -6f));
+        }
+
+        // 全部完成，返回掩体
+        while (Vector2.Distance(transform.position, COVER_CENTER) > 0.4f)
+        {
+            MoveTowards(COVER_CENTER);
+            UpdateBossAnimation(true);
+            yield return null;
+        }
+
+        cowboyState = CowboyState.AtCover;
+        stateTimer = 0f;
+    }
+
+    IEnumerator MoveToAndShoot(Vector2 pos)
+    {
+        // 移动到位置
+        while (Vector2.Distance(transform.position, pos) > 0.4f)
+        {
+            MoveTowards(pos);
+            UpdateBossAnimation(true);
+            yield return null;
+        }
+
+        // 开一枪
+        ShootUpward();
+        yield return new WaitForSeconds(0.2f); // 枪口停顿
+
+        // 返回掩体
+        while (Vector2.Distance(transform.position, COVER_CENTER) > 0.4f)
+        {
+            MoveTowards(COVER_CENTER);
+            UpdateBossAnimation(true);
+            yield return null;
+        }
+
+        yield return new WaitForSeconds(0.1f); // 掩体停顿
+    }
+
+    // IEnumerator MoveToAndShoot(Vector2 pos)
+    // {
+    //     while (Vector2.Distance(transform.position, pos) > 0.4f)
+    //     {
+    //         MoveTowards(pos);
+    //         UpdateBossAnimation(true);
+    //         if (Time.time - lastShootTime > shootInterval)
+    //         {
+    //             ShootUpward();
+    //         }
+    //         yield return null;
+    //     }
+    //     yield return new WaitForSeconds(0.3f); // 短暂停顿
+    // }
+
+    void EnterPauseState()
+    {
+        cowboyState = CowboyState.PausingAtSide;
+        stateTimer = 0f;
+        isShooting = false;
+    }
+
+    void ReturnToCover()
+    {
+        cowboyState = CowboyState.ReturningToCover;
+        stateTimer = 0f;
+    isShooting = false;
+    }
+    void MoveTowards(Vector2 target)
+    {
+        Vector2 direction = (target - (Vector2)transform.position).normalized;
+        if (direction.magnitude < 0.1f) return;
+
+        lastMovementDirection = direction;
+        transform.position += (Vector3)(direction * moveSpeed * Time.deltaTime);
+        isMovingThisFrame = true; // 仅用于通用动画，Boss 用自己的
+    }
+
+    void ShootUpward()
+    {
+        if (bulletPrefab == null) return;
+        lastShootTime = Time.time;
+
+        GameObject bullet = Instantiate(bulletPrefab, transform.position, Quaternion.identity);
+
+        Bullet bulletComp = bullet.GetComponent<Bullet>();
+        if (bulletComp != null)
+        {
+            bulletComp.isFromBoss = true;
+            bulletComp.SetDirection(Vector2.up); // 👈 关键：设置方向！
+        }
+    }
+
+    private float bossAnimTimer = 0f;
+    private int bossAnimIndex = 0;
+
+    void UpdateBossAnimation(bool isMoving)
+    {
+        // 如果正在显示受击效果
+        if (isShowingHit)
+        {
+            hitTimer -= Time.deltaTime;
+            if (hitTimer <= 0f)
+            {
+                isShowingHit = false;
+            }
+            return;
+        }
+
+        bossAnimTimer += Time.deltaTime;
+        Sprite[] frames = isMoving ? bossMovingFrames : bossIdleFrames;
+
+        if (frames == null || frames.Length == 0) return;
+
+        if (bossAnimTimer >= bossAnimInterval)
+        {
+            bossAnimTimer = 0f;
+            bossAnimIndex = (bossAnimIndex + 1) % frames.Length;
+        }
+
+        spriteRenderer.sprite = frames[bossAnimIndex];
     }
 
     void MoveDirectlyTowardsPlayer()
@@ -754,6 +1054,24 @@ public class Enemy : MonoBehaviour
 
         // 启动带金币掉落的死亡动画
         StartCoroutine(PlayDeathAnimationAndDropCoin());
+
+        // 👇 新增：如果是 Boss，触发白色闪光 + 地图切换
+        if (enemyType == EnemyType.Boss)
+        {
+            // 确保 LevelManager 已初始化
+            if (LevelManager.Instance != null)
+            {
+                LevelManager.Instance.StartWhiteFlashTransition(() =>
+                {
+                    // 在全白瞬间切换地图
+                    LevelManager.Instance?.ResetOrChangeTilemap();
+                });
+            }
+            else
+            {
+                Debug.LogWarning("[Enemy] LevelManager 未找到，无法执行 Boss 死亡特效！");
+            }
+        }
     }
 
     /// <summary>

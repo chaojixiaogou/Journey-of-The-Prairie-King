@@ -301,4 +301,25 @@ public class GameController : MonoBehaviour
 
         HideExitArrow(); // 确保隐藏
     }
+
+    /// <summary>
+    /// 跳过倒计时，直接进入“敌人清除后通关”模式（用于 Boss 关卡）
+    /// </summary>
+    public void StartBossLevel()
+    {
+        // 确保倒计时不运行
+        isLevelTimerActive = false;
+        if (countdownCoroutine != null)
+        {
+            StopCoroutine(countdownCoroutine);
+            countdownCoroutine = null;
+        }
+    
+        currentTime = 0; // 视为时间已耗尽
+    
+        // 👇 直接触发“时间结束”后的流程（即等待所有敌人被消灭）
+        HandleRoundEnd();
+    
+        Debug.Log("🎮 当前为 Boss 关卡，倒计时已禁用，等待击败所有敌人...");
+    }
 }
