@@ -1014,6 +1014,63 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &417446982
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 417446984}
+  - component: {fileID: 417446983}
+  m_Layer: 0
+  m_Name: ShopSystem
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &417446983
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 417446982}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4c3f13185f18df94f9e751ef7d4c634e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  merchantPrefab: {fileID: 825032390110740308, guid: b09521825281d2a40b08590479c21942, type: 3}
+  idleSprite: {fileID: -1814202416, guid: 1b82ee0dd0639a748ad94ef20f61aaa6, type: 3}
+  walkSprite1: {fileID: 602014364, guid: 1b82ee0dd0639a748ad94ef20f61aaa6, type: 3}
+  walkSprite2: {fileID: -1330914551, guid: 1b82ee0dd0639a748ad94ef20f61aaa6, type: 3}
+  bootsItemPrefab: {fileID: 8216433464564266034, guid: 76205444874712f4687388545e204902, type: 3}
+  pistolItemPrefab: {fileID: 8216433464564266034, guid: 269ee515df2e6c344bf24d56859d3a51, type: 3}
+  ammoBagItemPrefab: {fileID: 8216433464564266034, guid: 998b74b6c2d5e8c4bb09f44c8bb786fe, type: 3}
+  itemPositions:
+  - {fileID: 2522687317480025562, guid: f458a0c035b2d1a46aa0f330b3fc5e96, type: 3}
+  - {fileID: 2913599063408065241, guid: f11f0d63150da5747b7c9b078e3c42f8, type: 3}
+  - {fileID: 2236317544406446147, guid: 43d6065a39b1ee84d921efe83943f5d6, type: 3}
+  shopBackdrop: {fileID: 2687620557880327259, guid: 117c8b5e71c41f64c9adc1e69460fbc7, type: 3}
+  priceTextPrefab: {fileID: 8879605890367148217, guid: fc60311c8834dc2459c3013d7ef64dae, type: 3}
+--- !u!4 &417446984
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 417446982}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -0.13956904, y: -0.33962315, z: -0.037415393}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &417826013
 GameObject:
   m_ObjectHideFlags: 0
@@ -1223,6 +1280,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ff146cd7a0be8494982d9099786411e4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  baseMoveSpeed: 5
   moveSpeed: 5
   obstacleLayer:
     serializedVersion: 2
@@ -1231,7 +1289,10 @@ MonoBehaviour:
   skinWidth: 0.03
   bulletPrefab: {fileID: 6769795383300650736, guid: 9e3a5bde0772bd5438fab49bc32e34f4, type: 3}
   firePoint: {fileID: 310121415}
+  baseFireRate: 0.2
   fireRate: 0.2
+  basePistolDamage: 25
+  pistolDamage: 25
   upSprite: {fileID: 1283926745, guid: 1b82ee0dd0639a748ad94ef20f61aaa6, type: 3}
   downSprite: {fileID: -1413631223, guid: 1b82ee0dd0639a748ad94ef20f61aaa6, type: 3}
   leftSprite: {fileID: -706841222, guid: 1b82ee0dd0639a748ad94ef20f61aaa6, type: 3}
@@ -6841,3 +6902,4 @@ SceneRoots:
   - {fileID: 1602944301}
   - {fileID: 1649652539}
   - {fileID: 335813640}
+  - {fileID: 417446984}

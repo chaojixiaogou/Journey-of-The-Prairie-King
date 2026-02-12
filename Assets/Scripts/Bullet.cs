@@ -22,6 +22,12 @@ public class Bullet : MonoBehaviour
         direction = dir.normalized;
     }
 
+    // 👇 新增：允许外部设置伤害（关键！）
+    public void SetDamage(int dmg)
+    {
+        damage = dmg;
+    }
+
     void Update()
     {
         Vector3 direction_detect = direction;

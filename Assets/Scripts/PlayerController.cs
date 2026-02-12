@@ -7,6 +7,7 @@ using System.Collections.Generic;
 public class PlayerController : MonoBehaviour
 {
     // === 移动参数 ===
+    public float baseMoveSpeed = 5f;
     public float moveSpeed = 5f;
     public LayerMask obstacleLayer; // 用于碰撞检测的层（如 Obstacle）
 
@@ -17,7 +18,10 @@ public class PlayerController : MonoBehaviour
     // === 射击参数 ===
     public GameObject bulletPrefab;
     public Transform firePoint;
+    public float baseFireRate = 0.2f;
     public float fireRate = 0.2f;
+    public int basePistolDamage = 25; // 初始伤害
+    public  int pistolDamage = 25;
     private float lastFireTime;
 
     // === 射击方向对应的精灵 ===
@@ -266,69 +270,26 @@ public class PlayerController : MonoBehaviour
         SetupDeathEffectRenderer();
         UpdateHeldPowerupUI();
 
-        // rb = GetComponent<Rigidbody2D>();
-        // spriteRenderer = GetComponent<SpriteRenderer>();
+        RecalculateStatsFromUpgrades();
+    }
 
-        // rb.bodyType = RigidbodyType2D.Kinematic;
-        // rb.simulated = true;
+    public void RecalculateStatsFromUpgrades()
+    {
+        var gc = GameController.Instance;
+        if (gc == null) return;
 
-        // // 🔁 查找当前场景中名为 "PlayerSpawn" 或带 Tag 的出生点
-        // Transform spawnPoint = null;
+        // 靴子：每级 ×1.25（累乘）
+        float speedMult = Mathf.Pow(1.25f, gc.bootsUpgradeLevel);
+        moveSpeed = baseMoveSpeed * speedMult;
 
-        // // 方法 1：通过 GameObject 名称查找（简单）
-        // GameObject spawnObj = GameObject.Find("PlayerSpawn");
-        // if (spawnObj != null)
-        // {
-        //     spawnPoint = spawnObj.transform;
-        // }
-        // else
-        // {
-        //     // 方法 2：通过 Tag 查找（更规范，推荐）
-        //     spawnObj = GameObject.FindGameObjectWithTag("PlayerSpawn");
-        //     if (spawnObj != null)
-        //     {
-        //         spawnPoint = spawnObj.transform;
-        //     }
-        // }
+        // 手枪：每级 ×1.25 射速 → 间隔 ÷1.25
+        float fireRateMult = Mathf.Pow(1.25f, gc.pistolUpgradeLevel);
+        fireRate = baseFireRate / fireRateMult;
 
-        // // 设置出生位置
-        // if (spawnPoint != null)
-        // {
-        //     spawnPosition = spawnPoint.position;
-        //     spawnPosition.z = 0; // 确保 Z=0（2D 游戏）
-        // }
-        // else
-        // {
-        //     // 备用方案：如果没找到，用屏幕中心（调试用）
-        //     Camera cam = Camera.main;
-        //     if (cam != null)
-        //     {
-        //         spawnPosition = cam.ViewportToWorldPoint(new Vector3(0.5f, 0.5f, Mathf.Abs(cam.transform.position.z)));
-        //         spawnPosition.z = 0;
-        //     }
-        //     else
-        //     {
-        //         spawnPosition = Vector3.zero;
-        //     }
-        //     Debug.LogWarning("⚠️ 未找到 PlayerSpawn！请在场景中创建一个名为 'PlayerSpawn' 的空物体，并设置 Tag 为 'PlayerSpawn'");
-        // }
+        // 子弹袋：x2、x3、x4
+        pistolDamage = basePistolDamage * (gc.ammoBagUpgradeLevel + 1);
 
-        // Respawn(); // 初始化生命和状态
-
-        // // 初始化默认朝右
-        // if (spriteRenderer != null && rightSprite != null)
-        //     spriteRenderer.sprite = rightSprite;
-
-        // // 初始化死亡动画专用渲染器
-        // SetupDeathEffectRenderer();
-
-        // // 初始化道具UI
-        // UpdateHeldPowerupUI();
-
-        // // ===== 初始化音效 =====
-        // audioSource = gameObject.AddComponent<AudioSource>();
-        // audioSource.playOnAwake = false;
-        // audioSource.spatialBlend = 0f; // 2D 音效
+        Debug.Log($"🔄 重算属性: 移速={moveSpeed:F2}, 射速间隔={fireRate:F2}");
     }
 
     void Update()
@@ -566,6 +527,7 @@ public class PlayerController : MonoBehaviour
             if (bulletComp != null)
             {
                 bulletComp.SetDirection(dir);
+                bulletComp.SetDamage(pistolDamage);
             }
         }
     }

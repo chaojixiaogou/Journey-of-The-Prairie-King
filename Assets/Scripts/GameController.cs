@@ -43,9 +43,16 @@ public class GameController : MonoBehaviour
     public int persistentLives = 3; // 初始3条命
     public PowerupType? persistentHeldPowerup = null;
 
+    // 👇 新增：商店升级的持久化数据
+    public int bootsUpgradeLevel = 0;      // 靴子等级（0=初始）
+    public int pistolUpgradeLevel = 0;     // 手枪射速等级
+    public int ammoBagUpgradeLevel = 0;    // 弹药袋等级（0~2）
+
     [Header("Exit Arrow 设置")]
     public GameObject exitArrowPrefab; // 拖入你的 ExitArrow.prefab
     private GameObject spawnedExitArrow; // 动态生成的实例
+
+    public static System.Action OnShopRequested;
 
     void Awake()
     {
@@ -191,6 +198,16 @@ public class GameController : MonoBehaviour
                 Debug.Log("✅ 所有敌人已清除！");
 
                 ShowExitArrow();
+
+                // ✅ 第二步：如果是商店关卡，同时打开商店
+                int currentSceneIndex = UnityEngine.SceneManagement.SceneManager.GetActiveScene().buildIndex;
+                if (LevelManager.Instance != null && 
+                    LevelManager.Instance.shopLevelIndices != null &&
+                    System.Array.IndexOf(LevelManager.Instance.shopLevelIndices, currentSceneIndex) >= 0)
+                {
+                    // 直接调用，不再通过事件（避免耦合）
+                    ShopSystem.Instance?.OpenShop();
+                }
             }
         }
     }

@@ -19,6 +19,13 @@ public class LevelManager : MonoBehaviour
 
     // 示例：如果你的 Boss 在第 2 关和第 5 关（Build Settings 中索引为 1 和 4），就填 [1, 4]
 
+    [Header("商店设置")]
+    public int[] shopLevelIndices; // 在 Inspector 填写哪些关卡后出现商店（Build Index）
+
+    [Header("=== 地图切换配置 ===")]
+    public GameObject originalMap;   // 拖入 Grid
+    public GameObject newMap;        // 拖入 Grid_new
+
     // 🔥 不再需要 public GameObject fadePanel;
     private GameObject fadePanel;
     private CanvasGroup fadeCanvasGroup;
@@ -111,7 +118,7 @@ public class LevelManager : MonoBehaviour
         // 查找两个地图对象（建议通过名字或标签，这里用名字）
         GameObject oldGrid = GameObject.Find("Grid");
         GameObject newGrid = GameObject.Find("Grid_new");
-
+    
         if (oldGrid != null)
         {
             oldGrid.SetActive(false);
@@ -121,7 +128,7 @@ public class LevelManager : MonoBehaviour
         {
             Debug.LogWarning("⚠️ 未找到名为 'Grid' 的地图对象！");
         }
-
+    
         if (newGrid != null)
         {
             newGrid.SetActive(true);
