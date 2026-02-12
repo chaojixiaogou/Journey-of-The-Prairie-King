@@ -13,7 +13,7 @@ GameObject:
   - component: {fileID: 1127107042413662500}
   - component: {fileID: 3570451836942327210}
   - component: {fileID: -6926344824489527892}
-  m_Layer: 0
+  m_Layer: 11
   m_Name: Enemy_Fly
   m_TagString: Enemy
   m_Icon: {fileID: 0}
@@ -149,7 +149,7 @@ MonoBehaviour:
   pathUpdateInterval: 1
   obstacleLayer:
     serializedVersion: 2
-    m_Bits: 0
+    m_Bits: 259584
   enemyType: 1
   walkLeft: {fileID: -1222034684, guid: 1b82ee0dd0639a748ad94ef20f61aaa6, type: 3}
   walkRight: {fileID: 644484240, guid: 1b82ee0dd0639a748ad94ef20f61aaa6, type: 3}

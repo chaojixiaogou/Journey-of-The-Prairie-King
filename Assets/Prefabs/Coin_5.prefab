@@ -75,7 +75,7 @@ SpriteRenderer:
   m_LightmapParameters: {fileID: 0}
   m_SortingLayerID: 0
   m_SortingLayer: 0
-  m_SortingOrder: 2
+  m_SortingOrder: 3
   m_Sprite: {fileID: -1977441679, guid: 1b82ee0dd0639a748ad94ef20f61aaa6, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
@@ -175,5 +175,3 @@ MonoBehaviour:
   totalLifetime: 10
   blinkDuration: 2
   blinkInterval: 0.2
-  pickupCollectibleSound: {fileID: 8300000, guid: feda699843939b840997b1825e7cec9e, type: 3}
-  pickupVolume: 0.7

@@ -3860,8 +3860,6 @@ MonoBehaviour:
   fadeDuration: 1
   useSingleScene: 0
   bossLevelIndices: 01000000
-  originalMap: {fileID: 0}
-  newMap: {fileID: 0}
 --- !u!4 &1848178535
 Transform:
   m_ObjectHideFlags: 0

@@ -664,15 +664,12 @@ public class PlayerController : MonoBehaviour
                 spriteRenderer.sprite = rightSprite;
             }
 
-            Camera cam = Camera.main;
-            if (cam != null)
-            {
-                Vector3 center = cam.ViewportToWorldPoint(new Vector3(0.5f, 0.5f, Mathf.Abs(cam.transform.position.z)));
-                center.z = 0;
-                transform.position = currentRespawnPosition;
-            }
+            transform.position = currentRespawnPosition;
 
             isPlayingDeathAnim = false;
+
+            // ✅ 启动 1 秒无敌（带闪烁）
+            StartCoroutine(StartShortInvincibility(2f));
         };
 
         if (GameController.Instance != null)
@@ -693,20 +690,38 @@ public class PlayerController : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// 启动指定时长的无敌状态（带闪烁），用于复活或道具
+    /// </summary>
+    IEnumerator StartShortInvincibility(float duration)
+    {
+        isInvincible = true;
+        
+        // 如果当前因烟雾弹也在无敌，没关系，统一由 isInvincible 控制闪烁
+        
+        yield return new WaitForSeconds(duration);
+    
+        isInvincible = false;
+        
+        // 确保结束时可见（防止 blinkInterval 刚好停在隐藏相位）
+        if (spriteRenderer != null)
+            spriteRenderer.enabled = true;
+    }
+
     void UseHeldPowerup()
     {
         if (!heldPowerup.HasValue) return;
-    
+
         PowerupType type = heldPowerup.Value;
         bool isInBossBattle = IsInBossBattle(); // 👈 新增：检测 Boss 战
-    
+
         // ===== 特殊处理：Boss 战中禁用某些道具 =====
         bool isDisabledInBossBattle = isInBossBattle && (
             type == PowerupType.Nuke ||
             type == PowerupType.SmokeGrenade ||
             type == PowerupType.Tombstone
         );
-    
+
         if (isDisabledInBossBattle)
         {
             Debug.Log($"⚠️ 道具 {type} 在 Boss 战中被禁用！");
@@ -718,7 +733,7 @@ public class PlayerController : MonoBehaviour
             OnPowerupChanged?.Invoke(heldPowerup);
             return; // 👈 直接返回，不执行后续效果
         }
-    
+
         // ===== 原有逻辑继续 =====
         float now = Time.time;
         Debug.Log($"✨ 使用道具: {type}");

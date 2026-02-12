@@ -18,16 +18,16 @@ TagManager:
   - Obstacle
   - BulletWall
   - Player
-  - 
-  - 
-  - 
-  - 
-  - 
-  - 
-  - 
-  - 
-  - 
-  - 
+  - Enemy_Basic
+  - Enemy_Fast
+  - Enemy_Fly
+  - Enemy_Tank
+  - Enemy_Sentry
+  - Enemy_Mummy
+  - Enemy_Ghost
+  - Boss_Cowboy
+  - Boss_Demon
+  - Effects
   - 
   - 
   - 
@@ -74,4 +74,7 @@ TagManager:
     locked: 0
   - name: New Layer 10
     uniqueID: 353976847
+    locked: 0
+  - name: Effects
+    uniqueID: 3043332639
     locked: 0

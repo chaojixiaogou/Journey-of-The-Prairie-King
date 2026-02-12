@@ -13,8 +13,8 @@ GameObject:
   - component: {fileID: 1127107042413662500}
   - component: {fileID: 3570451836942327210}
   - component: {fileID: -6926344824489527892}
-  m_Layer: 9
-  m_Name: Enemy_Basic
+  m_Layer: 16
+  m_Name: Boss_Demon
   m_TagString: Enemy
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -76,7 +76,7 @@ SpriteRenderer:
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 2
-  m_Sprite: {fileID: 331400875, guid: 1b82ee0dd0639a748ad94ef20f61aaa6, type: 3}
+  m_Sprite: {fileID: -1414254776, guid: 1b82ee0dd0639a748ad94ef20f61aaa6, type: 3}
   m_Color: {r: 0.99371064, g: 0.97808623, b: 0.97808623, a: 1}
   m_FlipX: 0
   m_FlipY: 0
@@ -123,7 +123,7 @@ BoxCollider2D:
   m_SpriteTilingProperty:
     border: {x: 0, y: 0, z: 0, w: 0}
     pivot: {x: 0.5, y: 0.5}
-    oldSize: {x: 0.9375, y: 0.9375}
+    oldSize: {x: 1, y: 1}
     newSize: {x: 1, y: 1}
     adaptiveTilingThreshold: 0.5
     drawMode: 0
@@ -144,44 +144,68 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 148d121900f41654a8c76d88fc2461fa, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  maxHealth: 50
+  maxHealth: 100
   moveSpeed: 2
   pathUpdateInterval: 1
   obstacleLayer:
     serializedVersion: 2
-    m_Bits: 261312
-  enemyType: 0
-  walkLeft: {fileID: 331400875, guid: 1b82ee0dd0639a748ad94ef20f61aaa6, type: 3}
-  walkRight: {fileID: 2084502580, guid: 1b82ee0dd0639a748ad94ef20f61aaa6, type: 3}
-  hitSprite: {fileID: 856741247, guid: 1b82ee0dd0639a748ad94ef20f61aaa6, type: 3}
+    m_Bits: 1728
+  enemyType: 3
+  walkLeft: {fileID: -1871269370, guid: 1b82ee0dd0639a748ad94ef20f61aaa6, type: 3}
+  walkRight: {fileID: -1414254776, guid: 1b82ee0dd0639a748ad94ef20f61aaa6, type: 3}
+  hitSprite: {fileID: -1242937550, guid: 1b82ee0dd0639a748ad94ef20f61aaa6, type: 3}
   hitFlashDuration: 0.1
   sentryActivateFrames: []
   sentryFrameInterval: 0.1
   sentryHitSprite: {fileID: 0}
   sentryIdleSprite: {fileID: 0}
   isSentryActivated: 0
-  bossType: 0
-  bossSpawnPosition: {x: 0, y: -6}
-  bossMovingFrames: []
-  bossIdleFrames: []
+  bossType: 1
+  bossSpawnPosition: {x: 0, y: 0}
+  bossMovingFrames:
+  - {fileID: -1871269370, guid: 1b82ee0dd0639a748ad94ef20f61aaa6, type: 3}
+  - {fileID: -1414254776, guid: 1b82ee0dd0639a748ad94ef20f61aaa6, type: 3}
+  bossIdleFrames:
+  - {fileID: -1383170534, guid: 1b82ee0dd0639a748ad94ef20f61aaa6, type: 3}
+  - {fileID: 758503912, guid: 1b82ee0dd0639a748ad94ef20f61aaa6, type: 3}
   bossAnimInterval: 0.2
-  bulletPrefab: {fileID: 0}
+  bulletPrefab: {fileID: 6769795383300650736, guid: ddfd6501ccb76484c9e8db65d120ab4a, type: 3}
   shootInterval: 0.8
+  demonEnemyPrefabs:
+  - {fileID: 9093016304836105925, guid: d89ffa0a6ba5f244bad1ddac2de25926, type: 3}
+  - {fileID: 9093016304836105925, guid: 0dbad77d882eab046955dde71149b858, type: 3}
+  - {fileID: 9093016304836105925, guid: 27134482ffb50f64cbb7053fa1d6b014, type: 3}
+  - {fileID: 9093016304836105925, guid: 88bbc3fd7eeac7245af25dfa60a903a6, type: 3}
+  - {fileID: 9093016304836105925, guid: 28315bc6466bf2a4996aeed3bd8b8ddc, type: 3}
+  - {fileID: 9093016304836105925, guid: 0ef72e3f51b4988429e1553e740a5db2, type: 3}
+  - {fileID: 9093016304836105925, guid: fa5739c84d3c1ab419757a163ba6a928, type: 3}
+  idleAnimFrames:
+  - {fileID: -1871269370, guid: 1b82ee0dd0639a748ad94ef20f61aaa6, type: 3}
+  - {fileID: -1414254776, guid: 1b82ee0dd0639a748ad94ef20f61aaa6, type: 3}
+  castingAnimFrames:
+  - {fileID: -1383170534, guid: 1b82ee0dd0639a748ad94ef20f61aaa6, type: 3}
+  - {fileID: 758503912, guid: 1b82ee0dd0639a748ad94ef20f61aaa6, type: 3}
+  demonSummonEffectFrames:
+  - {fileID: 470803572, guid: 1b82ee0dd0639a748ad94ef20f61aaa6, type: 3}
+  - {fileID: -33692213, guid: 1b82ee0dd0639a748ad94ef20f61aaa6, type: 3}
+  - {fileID: 1080197028, guid: 1b82ee0dd0639a748ad94ef20f61aaa6, type: 3}
+  - {fileID: 884551579, guid: 1b82ee0dd0639a748ad94ef20f61aaa6, type: 3}
+  - {fileID: 1456683429, guid: 1b82ee0dd0639a748ad94ef20f61aaa6, type: 3}
+  summonEffectInterval: 0.1
   deathFrames:
-  - {fileID: -1989855200, guid: 1b82ee0dd0639a748ad94ef20f61aaa6, type: 3}
-  - {fileID: -1372684459, guid: 1b82ee0dd0639a748ad94ef20f61aaa6, type: 3}
-  - {fileID: -2001019541, guid: 1b82ee0dd0639a748ad94ef20f61aaa6, type: 3}
-  - {fileID: -1990999762, guid: 1b82ee0dd0639a748ad94ef20f61aaa6, type: 3}
-  - {fileID: 1828412534, guid: 1b82ee0dd0639a748ad94ef20f61aaa6, type: 3}
-  - {fileID: 542033889, guid: 1b82ee0dd0639a748ad94ef20f61aaa6, type: 3}
+  - {fileID: 470803572, guid: 1b82ee0dd0639a748ad94ef20f61aaa6, type: 3}
+  - {fileID: -33692213, guid: 1b82ee0dd0639a748ad94ef20f61aaa6, type: 3}
+  - {fileID: 1080197028, guid: 1b82ee0dd0639a748ad94ef20f61aaa6, type: 3}
+  - {fileID: 884551579, guid: 1b82ee0dd0639a748ad94ef20f61aaa6, type: 3}
+  - {fileID: 1456683429, guid: 1b82ee0dd0639a748ad94ef20f61aaa6, type: 3}
   deathFrameInterval: 0.1
   finalFrameHoldTime: 5
   coin1Prefab: {fileID: 6219252736255145464, guid: 4d67493ddd6855d4699db72f567efc14, type: 3}
   coin5Prefab: {fileID: 6219252736255145464, guid: 5a302caedb550e84e976b67bc5fee899, type: 3}
   heartPrefab: {fileID: 6137476867926967259, guid: 0f5d4359db0fd4f4ebeba4caa6abf215, type: 3}
-  totalDropChance: 0.8
-  coinWeight: 70
-  heartWeight: 30
+  totalDropChance: 0
+  coinWeight: 0
+  heartWeight: 100
   rareCoinChance: 0.1
   powerupPrefabs:
   - {fileID: 6155797925736656448, guid: b2218c89c4eeda24d89b85d094214903, type: 3}
@@ -192,7 +216,7 @@ MonoBehaviour:
   - {fileID: 6155797925736656448, guid: 0c29678ecba81eb499be25e9e2308bfd, type: 3}
   - {fileID: 6155797925736656448, guid: b203469c2dd453642b11be6c1dfc5ab7, type: 3}
   - {fileID: 6155797925736656448, guid: 8d317ef5e11815b4c99c24086b97fca1, type: 3}
-  powerupWeights: 0500000005000000050000000500000005000000050000000300000002000000
+  powerupWeights: 0000000000000000000000000000000000000000000000000000000000000000
   deathSounds:
   - {fileID: 8300000, guid: efac3891c0e37644fb1dfe578e0b8aa2, type: 3}
   - {fileID: 8300000, guid: 95905327d454b454790f6ee17e312ee3, type: 3}

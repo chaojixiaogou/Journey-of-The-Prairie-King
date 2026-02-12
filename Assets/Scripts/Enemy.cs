@@ -13,7 +13,8 @@ public enum EnemyType
 
 public enum BossType
 {
-    Cowboy // 未来可加：Alien, Tank, etc.
+    Cowboy, // 未来可加：Alien, Tank, etc.
+    Demon
 }
 
 [RequireComponent(typeof(Rigidbody2D))]
@@ -108,6 +109,35 @@ public class Enemy : MonoBehaviour
     private bool isExecutingBossSkill = false;
     private int peekShootCount = 0;
 
+    // ===== Demon 专用配置 =====
+    public GameObject[] demonEnemyPrefabs; // 拖入普通敌人 Prefab
+    public Sprite[] idleAnimFrames;   // [0] 和 [1]：静止/移动时用
+    public Sprite[] castingAnimFrames; // [0] 和 [1]：施法时用（技能2/3）
+    private Vector2 demonSpawnPosition; // 出生点（用于返回）
+
+    // 内部状态
+    private enum DemonState
+    {
+        InitialDelay,      // 初始2秒
+        Skill1_MovingToEdge,
+        Skill1_Shooting,
+        Skill1_Returning,
+        Skill2_Spawning,
+        Skill3_Shooting,
+        ChoosingNextSkill
+    }
+
+    private DemonState demonState = DemonState.InitialDelay;
+    private int skillPhase = 0; // 0=初始, 1=已放技能1, 2=已放技能2, >=3=随机
+    private Vector2 targetEdgePosition;
+    private int wavesSpawned = 0;
+
+    private float shootCooldown = 0f; // 射击冷却
+
+    [Header("=== Demon 召唤特效 ===")]
+    public Sprite[] demonSummonEffectFrames; // 拖入 4~6 张召唤动画
+    public float summonEffectInterval = 0.12f;
+
     // === 方向缓存（用于移动，非动画）===
     private Vector2 lastMovementDirection = Vector2.right;
 
@@ -201,6 +231,15 @@ public class Enemy : MonoBehaviour
         // 设置初始贴图
         if (bossIdleFrames != null && bossIdleFrames.Length >= 2)
             spriteRenderer.sprite = bossIdleFrames[0];
+    }
+    else if (enemyType == EnemyType.Boss && bossType == BossType.Demon)
+    {
+        transform.position = demonSpawnPosition;
+        lastPosition = transform.position;
+
+        // 设置初始贴图
+        if (idleAnimFrames != null && idleAnimFrames.Length >= 2)
+            spriteRenderer.sprite = idleAnimFrames[0];
     }
     else if (enemyType == EnemyType.Sentry)
     {
@@ -551,67 +590,388 @@ public class Enemy : MonoBehaviour
 
     void RunBossAI()
     {
-        if (bossType != BossType.Cowboy) return;
+        if (bossType == BossType.Cowboy)
+        {
+            if (bossType != BossType.Cowboy) return;
+
+            stateTimer += Time.deltaTime;
+
+            switch (cowboyState)
+            {
+                case CowboyState.AtCover:
+                    UpdateBossAnimation(false);
+                    if (stateTimer > 1f)
+                    {
+                        ChooseRandomAction();
+                    }
+                    break;
+
+                case CowboyState.MovingToEdge:
+                case CowboyState.MovingAcrossMap:
+                    MoveTowards(bossSkillPath[bossSkillPathIndex]);
+                    UpdateBossAnimation(true);
+                    if (isShooting && Time.time - lastShootTime > shootInterval)
+                    {
+                        ShootUpward();
+                    }
+                    if (Vector2.Distance(transform.position, bossSkillPath[bossSkillPathIndex]) < 0.4f)
+                    {
+                        bossSkillPathIndex++;
+                        if (bossSkillPathIndex < bossSkillPath.Length)
+                        {
+                            // 还有下一个点：继续横穿
+                            cowboyState = CowboyState.MovingAcrossMap;
+                        }
+                        else
+                        {
+                            // 路径走完：进入暂停状态
+                            EnterPauseState();
+                        }
+                    }
+                    break;
+
+                case CowboyState.PausingAtSide:
+                    UpdateBossAnimation(false);
+                    if (!isShooting && stateTimer > 1.5f)
+                    {
+                        ReturnToCover();
+                    }
+                    break;
+
+                case CowboyState.ReturningToCover:
+                    MoveTowards(COVER_CENTER);
+                    UpdateBossAnimation(true);
+                    if (Vector2.Distance(transform.position, COVER_CENTER) < 0.4f)
+                    {
+                        cowboyState = CowboyState.AtCover;
+                        stateTimer = 0f;
+                        isShooting = false;
+                    }
+                    break;
+
+                case CowboyState.PeekShooting:
+                    // 由协程控制，这里不做逻辑
+                    UpdateBossAnimation(false);
+                    break;
+            }
+        }
+        if (bossType == BossType.Demon)
+        {
+            RunDemonAI();
+            return;
+        }
+    }
+
+    void RunDemonAI()
+    {
+        if (player == null) return;
 
         stateTimer += Time.deltaTime;
 
-        switch (cowboyState)
+        switch (demonState)
         {
-            case CowboyState.AtCover:
-                UpdateBossAnimation(false);
-                if (stateTimer > 1f)
+            case DemonState.InitialDelay:
+                UpdateDemonAnimation(false); // 使用 idle 动画
+                if (stateTimer >= 1.5f)
                 {
-                    ChooseRandomAction();
+                    skillPhase = 1;
+                    demonState = DemonState.ChoosingNextSkill;
+                    stateTimer = 0f;
                 }
                 break;
 
-            case CowboyState.MovingToEdge:
-            case CowboyState.MovingAcrossMap:
-                MoveTowards(bossSkillPath[bossSkillPathIndex]);
-                UpdateBossAnimation(true);
-                if (isShooting && Time.time - lastShootTime > shootInterval)
+            case DemonState.ChoosingNextSkill:
+                UpdateDemonAnimation(false);
+                if (stateTimer >= 0.1f) // 立即选
                 {
-                    ShootUpward();
-                }
-                if (Vector2.Distance(transform.position, bossSkillPath[bossSkillPathIndex]) < 0.4f)
-                {
-                    bossSkillPathIndex++;
-                    if (bossSkillPathIndex < bossSkillPath.Length)
+                    if (skillPhase == 1)
                     {
-                        // 还有下一个点：继续横穿
-                        cowboyState = CowboyState.MovingAcrossMap;
+                        StartSkill1();
+                        skillPhase = 2;
+                    }
+                    else if (skillPhase == 2)
+                    {
+                        StartSkill2();
+                        skillPhase = 3;
                     }
                     else
                     {
-                        // 路径走完：进入暂停状态
-                        EnterPauseState();
+                        // 随机选择 1, 2, 3
+                        int r = Random.Range(1, 4);
+                        if (r == 1) StartSkill1();
+                        else if (r == 2) StartSkill2();
+                        else StartSkill3();
+                    }
+                    stateTimer = 0f;
+                }
+                break;
+
+            case DemonState.Skill1_MovingToEdge:
+                UpdateDemonAnimation(true); // 使用 idle 动画（移动状态）
+                MoveTowards(targetEdgePosition);
+                TryShootAtPlayer(); // 👈 新增：边走边射
+
+                if (Vector2.Distance(transform.position, targetEdgePosition) < 0.4f)
+                {
+                    demonState = DemonState.Skill1_Shooting;
+                    stateTimer = 0f;
+                    // 注意：此时进入纯射击阶段，由协程控制总时长
+                }
+                break;
+
+            case DemonState.Skill1_Shooting:
+                UpdateDemonAnimation(false);
+                TryShootAtPlayer();
+                break;
+
+            case DemonState.Skill1_Returning:
+                UpdateDemonAnimation(true);
+                MoveTowards(demonSpawnPosition);
+                TryShootAtPlayer(); // 👈 新增：边走边射
+
+                if (Vector2.Distance(transform.position, demonSpawnPosition) < 0.4f)
+                {
+                    demonState = DemonState.ChoosingNextSkill;
+                    stateTimer = 0f;
+                }
+                break;
+
+            case DemonState.Skill2_Spawning:
+                UpdateDemonAnimation(true); // 施法动画
+                // 由协程控制，这里不处理
+                break;
+
+            case DemonState.Skill3_Shooting:
+                UpdateDemonAnimation(true); // 施法动画
+                // 由协程控制
+                break;
+        }
+    }
+
+    void StartSkill1()
+    {
+        // 四个边界中点
+        Vector2 top = new Vector2(0f, 7f);
+        Vector2 bottom = new Vector2(0f, -7f);
+        Vector2 left = new Vector2(-7f, 0f);
+        Vector2 right = new Vector2(7f, 0f);
+        Vector2[] edges = { top, bottom, left, right };
+
+        // 找离玩家最远的点
+        Vector2 playerPos = player.position;
+        targetEdgePosition = edges[0];
+        float maxDist = 0f;
+        foreach (var edge in edges)
+        {
+            float d = Vector2.Distance(playerPos, edge);
+            if (d > maxDist)
+            {
+                maxDist = d;
+                targetEdgePosition = edge;
+            }
+        }
+
+        demonState = DemonState.Skill1_MovingToEdge;
+        stateTimer = 0f;
+
+        // 启动射击协程（在到达后开始）
+        StartCoroutine(Skill1_ShootAfterArrival());
+    }
+
+    IEnumerator Skill1_ShootAfterArrival()
+    {
+        // 等待进入 Shooting 状态
+        while (demonState != DemonState.Skill1_Shooting)
+            yield return null;
+
+        float shootDuration = Random.Range(5f, 8f);
+        float elapsed = 0f;
+        while (elapsed < shootDuration && demonState == DemonState.Skill1_Shooting)
+        {
+            // 实际射击由 TryShootAtPlayer() 在 Update 中处理
+            // 这里只需维持状态
+            elapsed += Time.deltaTime;
+            yield return null;
+        }
+
+        // 时间到，开始返回
+        demonState = DemonState.Skill1_Returning;
+        stateTimer = 0f;
+    }
+
+    void ShootAtPlayer()
+    {
+        if (bulletPrefab == null || player == null) return;
+        Vector2 dir = (player.position - transform.position).normalized;
+        GameObject bullet = Instantiate(bulletPrefab, transform.position, Quaternion.identity);
+        Bullet b = bullet.GetComponent<Bullet>();
+        if (b != null)
+        {
+            b.isFromBoss = true;
+            b.SetDirection(dir);
+        }
+    }
+
+    void StartSkill2()
+    {
+        demonState = DemonState.Skill2_Spawning;
+        wavesSpawned = 0;
+        StartCoroutine(Skill2_SpawnWaves());
+    }
+
+    IEnumerator Skill2_SpawnWaves()
+    {
+        for (int wave = 0; wave < 3; wave++)
+        {
+            if (demonEnemyPrefabs == null || demonEnemyPrefabs.Length == 0)
+            {
+                yield return new WaitForSeconds(2f);
+                continue;
+            }
+
+            int randomIndex = Random.Range(0, demonEnemyPrefabs.Length);
+            GameObject selectedPrefab = demonEnemyPrefabs[randomIndex];
+
+            Vector2[] offsets = { Vector2.up, Vector2.down, Vector2.left, Vector2.right };
+
+            // 启动4个并行动画+生成
+            List<IEnumerator> spawnRoutines = new List<IEnumerator>();
+            foreach (Vector2 offset in offsets)
+            {
+                Vector3 spawnPos = transform.position + (Vector3)offset;
+                spawnRoutines.Add(PlayDeathEffectThenSpawn(spawnPos, selectedPrefab));
+            }
+
+            // 并行执行所有4个动画
+            while (spawnRoutines.Count > 0)
+            {
+                for (int i = spawnRoutines.Count - 1; i >= 0; i--)
+                {
+                    if (!spawnRoutines[i].MoveNext())
+                    {
+                        spawnRoutines.RemoveAt(i);
                     }
                 }
-                break;
+                yield return null;
+            }
 
-            case CowboyState.PausingAtSide:
-                UpdateBossAnimation(false);
-                if (!isShooting && stateTimer > 1.5f)
+            // 本波结束，等待1秒再下一波
+            yield return new WaitForSeconds(2f);
+        }
+
+        demonState = DemonState.ChoosingNextSkill;
+        stateTimer = 0f;
+    }
+
+    /// <summary>
+    /// 在指定位置播放死亡动画，结束后生成指定敌人
+    /// </summary>
+    IEnumerator PlayDeathEffectThenSpawn(Vector3 position, GameObject enemyToSpawn)
+    {
+        Sprite[] effectFrames = demonSummonEffectFrames ?? deathFrames;
+        float interval = demonSummonEffectFrames != null ? summonEffectInterval : deathFrameInterval;
+
+        if (effectFrames == null || effectFrames.Length == 0)
+        {
+            if (enemyToSpawn != null)
+                Instantiate(enemyToSpawn, position, Quaternion.identity);
+            yield break;
+        }
+
+        GameObject effectObj = new GameObject("DemonSummonEffect");
+        effectObj.transform.position = position;
+        SpriteRenderer sr = effectObj.AddComponent<SpriteRenderer>();
+        sr.sortingLayerName = "Effects"; // 👈 建议新建 Effects 层
+        sr.sortingOrder = 9999;           // 👈 确保在最上层
+
+        foreach (var frame in effectFrames)
+        {
+            sr.sprite = frame;
+            yield return new WaitForSeconds(interval);
+        }
+
+        if (enemyToSpawn != null)
+            Instantiate(enemyToSpawn, position, Quaternion.identity);
+
+        Destroy(effectObj);
+    }
+
+    void StartSkill3()
+    {
+        demonState = DemonState.Skill3_Shooting;
+        StartCoroutine(Skill3_FireEightDirections());
+    }
+
+    IEnumerator Skill3_FireEightDirections()
+    {
+        float elapsed = 0f;
+        while (elapsed < 3f)
+        {
+            // 8 个方向（45度间隔）
+            for (int i = 0; i < 8; i++)
+            {
+                float angle = i * 45f * Mathf.Deg2Rad;
+                Vector2 dir = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle));
+                if (bulletPrefab != null)
                 {
-                    ReturnToCover();
+                    GameObject bullet = Instantiate(bulletPrefab, transform.position, Quaternion.identity);
+                    Bullet b = bullet.GetComponent<Bullet>();
+                    if (b != null)
+                    {
+                        b.isFromBoss = true;
+                        b.SetDirection(dir);
+                    }
                 }
-                break;
+            }
+            yield return new WaitForSeconds(0.2f);
+            elapsed += 0.2f;
+        }
+        demonState = DemonState.ChoosingNextSkill;
+        stateTimer = 0f;
+    }
 
-            case CowboyState.ReturningToCover:
-                MoveTowards(COVER_CENTER);
-                UpdateBossAnimation(true);
-                if (Vector2.Distance(transform.position, COVER_CENTER) < 0.4f)
-                {
-                    cowboyState = CowboyState.AtCover;
-                    stateTimer = 0f;
-                    isShooting = false;
-                }
-                break;
+    void TryShootAtPlayer()
+    {
+        if (player == null || bulletPrefab == null) return;
 
-            case CowboyState.PeekShooting:
-                // 由协程控制，这里不做逻辑
-                UpdateBossAnimation(false);
-                break;
+        shootCooldown -= Time.deltaTime;
+        if (shootCooldown <= 0f)
+        {
+            ShootAtPlayer(); // 你已有的方法
+            shootCooldown = shootInterval;
+        }
+    }
+
+    private float demonAnimTimer = 0f;
+    private bool demonUseCastingAnim = false;
+    private int demonAnimIndex = 0;
+
+    void UpdateDemonAnimation(bool isCasting)
+    {
+        demonUseCastingAnim = isCasting;
+
+        // 如果正在显示受击效果
+        if (isShowingHit)
+        {
+            hitTimer -= Time.deltaTime;
+            if (hitTimer <= 0f)
+            {
+                isShowingHit = false;
+            }
+            return;
+        }
+
+        demonAnimTimer += Time.deltaTime;
+        float interval = 0.25f;
+        Sprite[] frames = demonUseCastingAnim ? castingAnimFrames : idleAnimFrames;
+
+        if (frames == null || frames.Length < 2) return;
+
+        if (demonAnimTimer >= interval)
+        {
+            demonAnimTimer = 0f;
+            demonAnimIndex = (demonAnimIndex + 1) % 2;
+            spriteRenderer.sprite = frames[demonAnimIndex];
         }
     }
 
@@ -1063,8 +1423,11 @@ public class Enemy : MonoBehaviour
             {
                 LevelManager.Instance.StartWhiteFlashTransition(() =>
                 {
-                    // 在全白瞬间切换地图
-                    LevelManager.Instance?.ResetOrChangeTilemap();
+                    if(bossType == BossType.Cowboy)
+                    {
+                        // 在全白瞬间切换地图
+                        LevelManager.Instance?.ResetOrChangeTilemap();
+                    }
                 });
             }
             else
