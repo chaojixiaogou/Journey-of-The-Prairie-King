@@ -14,7 +14,7 @@ GameObject:
   - component: {fileID: 3570451836942327210}
   - component: {fileID: -6926344824489527892}
   m_Layer: 16
-  m_Name: Boss_Cowboy
+  m_Name: Boss_Cowboy_second
   m_TagString: Enemy
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -144,7 +144,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 148d121900f41654a8c76d88fc2461fa, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  maxHealth: 1300
+  maxHealth: 2600
   moveSpeed: 3.7
   pathUpdateInterval: 1
   obstacleLayer:

@@ -144,8 +144,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 148d121900f41654a8c76d88fc2461fa, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  maxHealth: 100
-  moveSpeed: 2
+  maxHealth: 8500
+  moveSpeed: 3.7
   pathUpdateInterval: 1
   obstacleLayer:
     serializedVersion: 2
@@ -170,7 +170,7 @@ MonoBehaviour:
   - {fileID: 758503912, guid: 1b82ee0dd0639a748ad94ef20f61aaa6, type: 3}
   bossAnimInterval: 0.2
   bulletPrefab: {fileID: 6769795383300650736, guid: ddfd6501ccb76484c9e8db65d120ab4a, type: 3}
-  shootInterval: 0.8
+  shootInterval: 0.3
   demonEnemyPrefabs:
   - {fileID: 9093016304836105925, guid: d89ffa0a6ba5f244bad1ddac2de25926, type: 3}
   - {fileID: 9093016304836105925, guid: 0dbad77d882eab046955dde71149b858, type: 3}
@@ -199,7 +199,7 @@ MonoBehaviour:
   - {fileID: 884551579, guid: 1b82ee0dd0639a748ad94ef20f61aaa6, type: 3}
   - {fileID: 1456683429, guid: 1b82ee0dd0639a748ad94ef20f61aaa6, type: 3}
   deathFrameInterval: 0.1
-  finalFrameHoldTime: 5
+  finalFrameHoldTime: 0
   coin1Prefab: {fileID: 6219252736255145464, guid: 4d67493ddd6855d4699db72f567efc14, type: 3}
   coin5Prefab: {fileID: 6219252736255145464, guid: 5a302caedb550e84e976b67bc5fee899, type: 3}
   heartPrefab: {fileID: 6137476867926967259, guid: 0f5d4359db0fd4f4ebeba4caa6abf215, type: 3}

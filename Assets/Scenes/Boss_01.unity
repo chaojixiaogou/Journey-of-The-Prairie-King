@@ -2414,8 +2414,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ff146cd7a0be8494982d9099786411e4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  baseMoveSpeed: 5
-  moveSpeed: 5
+  baseMoveSpeed: 3.7
+  moveSpeed: 3.7
   obstacleLayer:
     serializedVersion: 2
     m_Bits: 192
@@ -2423,8 +2423,8 @@ MonoBehaviour:
   skinWidth: 0.03
   bulletPrefab: {fileID: 6769795383300650736, guid: 9e3a5bde0772bd5438fab49bc32e34f4, type: 3}
   firePoint: {fileID: 310121415}
-  baseFireRate: 0.2
-  fireRate: 0.2
+  baseFireRate: 0.3
+  fireRate: 0.3
   basePistolDamage: 25
   pistolDamage: 25
   upSprite: {fileID: 1283926745, guid: 1b82ee0dd0639a748ad94ef20f61aaa6, type: 3}
@@ -5576,7 +5576,7 @@ MonoBehaviour:
   - {fileID: 2913599063408065241, guid: f11f0d63150da5747b7c9b078e3c42f8, type: 3}
   - {fileID: 2236317544406446147, guid: 43d6065a39b1ee84d921efe83943f5d6, type: 3}
   shopBackdrop: {fileID: 2687620557880327259, guid: 117c8b5e71c41f64c9adc1e69460fbc7, type: 3}
-  priceTextPrefab: {fileID: 8879605890367148217, guid: fc60311c8834dc2459c3013d7ef64dae, type: 3}
+  priceTextUIPrefab: {fileID: 6649229382403384000, guid: 84ccfbf55efccd642a959da45dffbcb9, type: 3}
   gameCanvas: {fileID: 1977076662}
 --- !u!4 &983253905
 Transform:

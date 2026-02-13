@@ -66,6 +66,8 @@ public class GameController : MonoBehaviour
     [Header("开始界面 Prefabs")]
     public GameObject gameBeginCanvasPrefab; // 拖入你的 GameBeginCanvas.prefab
     private GameObject currentGameBeginCanvasInstance; // 当前实例的引用
+
+    public bool canDetectIsReachBottom = false;
     
 
     void Awake()
@@ -323,6 +325,7 @@ public class GameController : MonoBehaviour
                 Debug.Log("✅ 所有敌人已清除！");
 
                 ShowExitArrow();
+                canDetectIsReachBottom = true;
 
                 // ✅ 第二步：如果是商店关卡，同时打开商店
                 int currentSceneIndex = UnityEngine.SceneManagement.SceneManager.GetActiveScene().buildIndex;

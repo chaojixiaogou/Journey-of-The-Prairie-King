@@ -147,8 +147,8 @@ MonoBehaviour:
   currentLevel: 0
   levels:
   - icon: {fileID: -840950491, guid: 1b82ee0dd0639a748ad94ef20f61aaa6, type: 3}
-    price: 1
+    price: 8
     description: 
   - icon: {fileID: 565246432, guid: 1b82ee0dd0639a748ad94ef20f61aaa6, type: 3}
-    price: 1
+    price: 20
     description: 

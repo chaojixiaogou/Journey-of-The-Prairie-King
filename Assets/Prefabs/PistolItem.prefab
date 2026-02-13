@@ -147,11 +147,11 @@ MonoBehaviour:
   currentLevel: 0
   levels:
   - icon: {fileID: 611159417, guid: 1b82ee0dd0639a748ad94ef20f61aaa6, type: 3}
-    price: 1
+    price: 10
     description: 
   - icon: {fileID: 504263472, guid: 1b82ee0dd0639a748ad94ef20f61aaa6, type: 3}
-    price: 1
+    price: 20
     description: 
   - icon: {fileID: 1577542874, guid: 1b82ee0dd0639a748ad94ef20f61aaa6, type: 3}
-    price: 1
+    price: 30
     description: 

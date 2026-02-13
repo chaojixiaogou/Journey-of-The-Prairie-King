@@ -26,6 +26,10 @@ public class LevelManager : MonoBehaviour
     public GameObject originalMap;   // 拖入 Grid
     public GameObject newMap;        // 拖入 Grid_new
 
+    // === Game Win UI ===
+    [Header("Game Win")]
+    public GameObject winCanvas; // 拖入你的 Canvas
+
     // 🔥 不再需要 public GameObject fadePanel;
     private GameObject fadePanel;
     private CanvasGroup fadeCanvasGroup;
@@ -242,6 +246,16 @@ public class LevelManager : MonoBehaviour
         if (nextSceneIndex >= UnityEngine.SceneManagement.SceneManager.sceneCountInBuildSettings)
         {
             Debug.Log("🏆 已完成所有关卡！");
+            // 显示 Game Win UI
+            if (winCanvas != null)
+            {
+                // 实例化 winCanvas 预制体
+                Instantiate(winCanvas);
+            }
+            else
+            {
+                Debug.LogError("winCanvas 未赋值！");
+            }
             return;
         }
 

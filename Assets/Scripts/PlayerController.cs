@@ -368,9 +368,10 @@ public class PlayerController : MonoBehaviour
         }
 
         // 进入下一关检测
-        if (!hasTriggeredNextLevel && transform.position.y <= GameController.Instance.mapBottomY)
+        if (GameController.Instance.canDetectIsReachBottom && !hasTriggeredNextLevel && transform.position.y <= GameController.Instance.mapBottomY)
         {
             hasTriggeredNextLevel = true; // 🔒 锁住，防止重复触发
+            GameController.Instance.canDetectIsReachBottom = false;
             GameController.Instance.OnPlayerReachBottom();
         }
     }
@@ -559,6 +560,7 @@ public class PlayerController : MonoBehaviour
 
         OnLivesChanged?.Invoke();
 
+        // if (false)
         if (currentLives < 0)
         {
             StartCoroutine(PlayGameOverAnimation());

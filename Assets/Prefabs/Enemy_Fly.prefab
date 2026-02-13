@@ -144,8 +144,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 148d121900f41654a8c76d88fc2461fa, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  maxHealth: 50
-  moveSpeed: 3
+  maxHealth: 25
+  moveSpeed: 3.7
   pathUpdateInterval: 1
   obstacleLayer:
     serializedVersion: 2
@@ -167,6 +167,11 @@ MonoBehaviour:
   bossAnimInterval: 0.2
   bulletPrefab: {fileID: 0}
   shootInterval: 0.8
+  demonEnemyPrefabs: []
+  idleAnimFrames: []
+  castingAnimFrames: []
+  demonSummonEffectFrames: []
+  summonEffectInterval: 0.12
   deathFrames:
   - {fileID: -1989855200, guid: 1b82ee0dd0639a748ad94ef20f61aaa6, type: 3}
   - {fileID: -1372684459, guid: 1b82ee0dd0639a748ad94ef20f61aaa6, type: 3}
@@ -179,9 +184,9 @@ MonoBehaviour:
   coin1Prefab: {fileID: 6219252736255145464, guid: 4d67493ddd6855d4699db72f567efc14, type: 3}
   coin5Prefab: {fileID: 6219252736255145464, guid: 5a302caedb550e84e976b67bc5fee899, type: 3}
   heartPrefab: {fileID: 6137476867926967259, guid: 0f5d4359db0fd4f4ebeba4caa6abf215, type: 3}
-  totalDropChance: 0.8
-  coinWeight: 70
-  heartWeight: 30
+  totalDropChance: 0.07576
+  coinWeight: 66
+  heartWeight: 2
   rareCoinChance: 0.1
   powerupPrefabs:
   - {fileID: 6155797925736656448, guid: b2218c89c4eeda24d89b85d094214903, type: 3}
@@ -192,7 +197,7 @@ MonoBehaviour:
   - {fileID: 6155797925736656448, guid: 0c29678ecba81eb499be25e9e2308bfd, type: 3}
   - {fileID: 6155797925736656448, guid: b203469c2dd453642b11be6c1dfc5ab7, type: 3}
   - {fileID: 6155797925736656448, guid: 8d317ef5e11815b4c99c24086b97fca1, type: 3}
-  powerupWeights: 0500000005000000050000000500000005000000050000000300000002000000
+  powerupWeights: 0400000004000000040000000400000005000000050000000400000002000000
   deathSounds:
   - {fileID: 8300000, guid: efac3891c0e37644fb1dfe578e0b8aa2, type: 3}
   - {fileID: 8300000, guid: 95905327d454b454790f6ee17e312ee3, type: 3}
