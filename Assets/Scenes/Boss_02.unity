@@ -4831,6 +4831,7 @@ MonoBehaviour:
   - {fileID: 2236317544406446147, guid: 43d6065a39b1ee84d921efe83943f5d6, type: 3}
   shopBackdrop: {fileID: 2687620557880327259, guid: 117c8b5e71c41f64c9adc1e69460fbc7, type: 3}
   priceTextPrefab: {fileID: 8879605890367148217, guid: fc60311c8834dc2459c3013d7ef64dae, type: 3}
+  gameCanvas: {fileID: 1977076662}
 --- !u!4 &1409453088
 Transform:
   m_ObjectHideFlags: 0

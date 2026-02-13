@@ -3868,7 +3868,7 @@ MonoBehaviour:
   fadeDuration: 1
   useSingleScene: 0
   bossLevelIndices: 
-  shopLevelIndices: 0000000001000000
+  shopLevelIndices: 00000000010000000200000003000000
   originalMap: {fileID: 0}
   newMap: {fileID: 0}
 --- !u!4 &1848178535
@@ -4183,6 +4183,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ff146cd7a0be8494982d9099786411e4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  baseMoveSpeed: 5
   moveSpeed: 5
   obstacleLayer:
     serializedVersion: 2
@@ -4191,8 +4192,10 @@ MonoBehaviour:
   skinWidth: 0.03
   bulletPrefab: {fileID: 6769795383300650736, guid: 9e3a5bde0772bd5438fab49bc32e34f4, type: 3}
   firePoint: {fileID: 857561391}
+  baseFireRate: 0.2
   fireRate: 0.2
   basePistolDamage: 25
+  pistolDamage: 25
   upSprite: {fileID: 1283926745, guid: 1b82ee0dd0639a748ad94ef20f61aaa6, type: 3}
   downSprite: {fileID: -1413631223, guid: 1b82ee0dd0639a748ad94ef20f61aaa6, type: 3}
   leftSprite: {fileID: -706841222, guid: 1b82ee0dd0639a748ad94ef20f61aaa6, type: 3}
@@ -4429,6 +4432,7 @@ MonoBehaviour:
   - {fileID: 1993219460}
   shopBackdrop: {fileID: 2687620557880327259, guid: 117c8b5e71c41f64c9adc1e69460fbc7, type: 3}
   priceTextPrefab: {fileID: 8879605890367148217, guid: fc60311c8834dc2459c3013d7ef64dae, type: 3}
+  gameCanvas: {fileID: 830232479}
 --- !u!4 &1989459082
 Transform:
   m_ObjectHideFlags: 0

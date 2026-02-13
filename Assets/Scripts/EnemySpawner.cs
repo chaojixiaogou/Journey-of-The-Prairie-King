@@ -29,6 +29,9 @@ public class EnemySpawner : MonoBehaviour
     [Header("初始延迟")]
     public float initialDelay = 2f; // 默认延迟 2 秒，可在 Inspector 调整
 
+    private const string ENEMY_FLY_NAME = "Enemy_Fly";
+    private const string ENEMY_GHOST_NAME = "Enemy_Ghost";
+
     void Start()
     {
         GenerateSpawnPoints();
@@ -38,18 +41,45 @@ public class EnemySpawner : MonoBehaviour
     void GenerateSpawnPoints()
     {
         spawnPoints.Clear();
-        int[] offsets = { -2, -1, 0, 1 };
+        float[] offsets = { -1.5f, -0.5f, 0.5f, 1.5f };
 
         // 上边 (y = +7)
-        foreach (int x in offsets) spawnPoints.Add(new Vector3(x, 7.3f, 0));
+        foreach (float x in offsets) spawnPoints.Add(new Vector3(x, 7.5f, 0));
         // 下边 (y = -8)
-        foreach (int x in offsets) spawnPoints.Add(new Vector3(x, -7.7f, 0));
+        foreach (float x in offsets) spawnPoints.Add(new Vector3(x, -7.5f, 0));
         // 左边 (x = -8)
-        foreach (int y in offsets) spawnPoints.Add(new Vector3(-7.7f, y, 0));
+        foreach (float y in offsets) spawnPoints.Add(new Vector3(-7.5f, y, 0));
         // 右边 (x = +7)
-        foreach (int y in offsets) spawnPoints.Add(new Vector3(7.3f, y, 0));
+        foreach (float y in offsets) spawnPoints.Add(new Vector3(7.5f, y, 0));
 
         Debug.Log($"[EnemySpawner] 已生成 {spawnPoints.Count} 个中心对齐的生成点");
+    }
+
+    // ===== 新增：在地图四条边上随机选一个点 =====
+    Vector3 GetRandomBoundaryPosition()
+    {
+        // 地图边界（与你当前 spawnPoints 一致）
+        float topY = 7.5f;
+        float bottomY = -7.5f;
+        float leftX = -7.5f;
+        float rightX = 7.5f;
+
+        // 随机选择四条边之一
+        int edge = Random.Range(0, 4);
+
+        switch (edge)
+        {
+            case 0: // 上边 (y = topY)
+                return new Vector3(Random.Range(leftX, rightX), topY, 0);
+            case 1: // 下边 (y = bottomY)
+                return new Vector3(Random.Range(leftX, rightX), bottomY, 0);
+            case 2: // 左边 (x = leftX)
+                return new Vector3(leftX, Random.Range(bottomY, topY), 0);
+            case 3: // 右边 (x = rightX)
+                return new Vector3(rightX, Random.Range(bottomY, topY), 0);
+            default:
+                return Vector3.zero;
+        }
     }
 
     System.Collections.IEnumerator SpawnLoop()
@@ -89,8 +119,20 @@ public class EnemySpawner : MonoBehaviour
                 continue;
             }
 
-            Vector3 point = spawnPoints[Random.Range(0, spawnPoints.Count)];
-            Instantiate(selectedPrefab, point, Quaternion.identity);
+            Vector3 spawnPosition;
+
+            // 👇 新增：判断是否为 Fly 或 Ghost
+            string prefabName = selectedPrefab.name;
+            if (prefabName == ENEMY_FLY_NAME || prefabName == ENEMY_GHOST_NAME)
+            {
+                spawnPosition = GetRandomBoundaryPosition(); // 连续边界
+            }
+            else
+            {
+                spawnPosition = spawnPoints[Random.Range(0, spawnPoints.Count)]; // 原有离散点
+            }
+
+            Instantiate(selectedPrefab, spawnPosition, Quaternion.identity);
             spawnedCount++;
 
             yield return new WaitForSeconds(spawnInterval);

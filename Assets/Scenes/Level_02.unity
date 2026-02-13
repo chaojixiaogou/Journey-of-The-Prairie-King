@@ -609,6 +609,7 @@ MonoBehaviour:
   - {fileID: 2236317544406446147, guid: 43d6065a39b1ee84d921efe83943f5d6, type: 3}
   shopBackdrop: {fileID: 2687620557880327259, guid: 117c8b5e71c41f64c9adc1e69460fbc7, type: 3}
   priceTextPrefab: {fileID: 8879605890367148217, guid: fc60311c8834dc2459c3013d7ef64dae, type: 3}
+  gameCanvas: {fileID: 1977076662}
 --- !u!4 &267756876
 Transform:
   m_ObjectHideFlags: 0
@@ -5250,15 +5251,15 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   enemyTypes:
   - prefab: {fileID: 9093016304836105925, guid: d89ffa0a6ba5f244bad1ddac2de25926, type: 3}
-    weight: 40
+    weight: 0
   - prefab: {fileID: 9093016304836105925, guid: 0dbad77d882eab046955dde71149b858, type: 3}
     weight: 0
   - prefab: {fileID: 9093016304836105925, guid: fa5739c84d3c1ab419757a163ba6a928, type: 3}
-    weight: 20
+    weight: 0
   - prefab: {fileID: 9093016304836105925, guid: 27134482ffb50f64cbb7053fa1d6b014, type: 3}
-    weight: 20
+    weight: 100
   - prefab: {fileID: 9093016304836105925, guid: 0ef72e3f51b4988429e1553e740a5db2, type: 3}
-    weight: 20
+    weight: 0
   totalEnemiesToSpawn: 240
   spawnInterval: 2
   initialDelay: 2
