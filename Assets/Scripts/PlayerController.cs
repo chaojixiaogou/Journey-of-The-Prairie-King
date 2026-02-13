@@ -152,6 +152,8 @@ public class PlayerController : MonoBehaviour
     private SpriteRenderer spriteRenderer;
     private Vector2 shootDirection = Vector2.right; // 默认朝右
 
+    private bool isBoss = false;
+
     // ===== 音效 =====
     public AudioClip shootSound;      // 拖入 Inspector 的射击音效
     [Range(0f, 1f)]
@@ -294,6 +296,12 @@ public class PlayerController : MonoBehaviour
 
     void Update()
     {
+        // 👇 新增：如果游戏还没开始，跳过所有输入处理
+        if (!GameController.HasGameStarted)
+        {
+            return;
+        }
+
         // 关键：动画播放或 Game Over 时完全禁用逻辑
         if (isDead || isPlayingDeathAnim)
         {
@@ -551,7 +559,7 @@ public class PlayerController : MonoBehaviour
 
         OnLivesChanged?.Invoke();
 
-        if (currentLives <= 0)
+        if (currentLives < 0)
         {
             StartCoroutine(PlayGameOverAnimation());
         }
@@ -626,7 +634,7 @@ public class PlayerController : MonoBehaviour
                 spriteRenderer.sprite = rightSprite;
             }
 
-            transform.position = currentRespawnPosition;
+            transform.position = GetScreenCenterWorldPosition();
 
             isPlayingDeathAnim = false;
 
@@ -650,6 +658,21 @@ public class PlayerController : MonoBehaviour
                 if (spawner != null) spawner.Resume();
             }
         }
+    }
+
+    Vector3 GetScreenCenterWorldPosition()
+    {
+        if(isBoss)
+            return currentRespawnPosition;
+        Camera cam = Camera.main;
+        if (cam != null)
+        {
+            float distance = Mathf.Abs(cam.transform.position.z);
+            Vector3 screenCenter = cam.ViewportToWorldPoint(new Vector3(0.5f, 0.5f, distance));
+            screenCenter.z = 0;
+            return screenCenter;
+        }
+        return Vector3.zero;
     }
 
     /// <summary>
@@ -1318,6 +1341,7 @@ public class PlayerController : MonoBehaviour
     public void SetRespawnPosition(Vector2 position)
     {
         currentRespawnPosition = position;
+        isBoss = true;
     }
 
     IEnumerator PlayGameOverAnimation()

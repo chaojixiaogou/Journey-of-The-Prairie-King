@@ -35,7 +35,7 @@ public class ShopSystem : MonoBehaviour
     private List<GameObject> spawnedItems = new List<GameObject>();
 
     [Header("价格标签")]
-    public GameObject priceTextPrefab;
+    public GameObject priceTextUIPrefab;
 
     // 👇 新增：左下角升级图标 UI
     [Header("左下角升级图标 UI")]
@@ -250,17 +250,36 @@ public class ShopSystem : MonoBehaviour
             int price = shopItem.GetNextPrice();
             if (price <= 0) return;
 
-            if (priceTextPrefab != null)
+            // ====== 修改开始：使用 UI 价格标签 ======
+            if (priceTextUIPrefab != null && gameCanvas != null)
             {
-                Vector3 pricePos = pos.position + Vector3.down * 0.8f;
-                GameObject priceObj = Instantiate(priceTextPrefab, pricePos, Quaternion.identity);
-                TextMeshPro tmp = priceObj.GetComponent<TextMeshPro>();
+                // 实例化 UI 价格标签（作为 Canvas 子物体）
+                GameObject priceObj = Instantiate(priceTextUIPrefab, gameCanvas.transform);
+            
+                TextMeshProUGUI tmp = priceObj.GetComponent<TextMeshProUGUI>();
                 if (tmp != null)
                 {
                     tmp.text = price.ToString();
                 }
-                priceObj.transform.SetParent(itemObj.transform);
+
+                // 计算屏幕位置：商品位置下方一点
+                Vector3 worldPos = pos.position + Vector3.down * 1f;
+                Vector2 screenPos = RectTransformUtility.WorldToScreenPoint(
+                    Camera.main, 
+                    worldPos
+                );
+
+                // 设置 UI 位置（注意：anchoredPosition 是相对于 Canvas 锚点的）
+                RectTransform rt = priceObj.GetComponent<RectTransform>();
+                rt.anchoredPosition = screenPos - new Vector2(Screen.width / 2f, Screen.height / 2f);
+                // 或者更安全的方式（如果 Canvas 是 Screen Space - Overlay）：
+                // rt.position = screenPos; // 但需确保 pivot 是中心
+
+                // 可选：保存引用以便后续销毁
+                priceObj.name = "PriceTag_" + type;
+                spawnedItems.Add(priceObj); // 👈 加入列表，OnItemPurchased 时一起销毁
             }
+            // ====== 修改结束 ======
         }
         else
         {

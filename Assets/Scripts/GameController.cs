@@ -2,6 +2,7 @@
 using UnityEngine;
 using System.Collections;
 using System.Linq;
+using UnityEngine.SceneManagement;
 
 public class GameController : MonoBehaviour
 {
@@ -54,6 +55,19 @@ public class GameController : MonoBehaviour
 
     public static System.Action OnShopRequested;
 
+    [Header("开始界面")]
+    // public GameObject gameBeginCanvas; // 在 Inspector 拖入你的 GameBeginCanvas
+
+    private bool hasGameStarted = false;
+
+    public static bool HasGameStarted => Instance?.hasGameStarted == true;
+
+    private const string GAME_BEGIN_CANVAS_NAME = "GameBeginCanvas";
+    [Header("开始界面 Prefabs")]
+    public GameObject gameBeginCanvasPrefab; // 拖入你的 GameBeginCanvas.prefab
+    private GameObject currentGameBeginCanvasInstance; // 当前实例的引用
+    
+
     void Awake()
     {
         if (Instance == null)
@@ -65,6 +79,9 @@ public class GameController : MonoBehaviour
             persistentLives = 3;
             persistentHeldPowerup = null;
 
+            // 👇 新增：监听场景加载
+            UnityEngine.SceneManagement.SceneManager.sceneLoaded += OnSceneLoaded;
+
             // 可选：如果你有“继续游戏”功能，可以用 PlayerPrefs 判断是否加载存档
             // 否则每次都从默认状态开始
         }
@@ -74,10 +91,116 @@ public class GameController : MonoBehaviour
         }
     }
 
+    private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+{
+    if (scene.buildIndex == 0)
+    {
+        hasGameStarted = false;
+
+        // 👇 销毁旧实例（安全起见）
+        if (currentGameBeginCanvasInstance != null)
+        {
+            Destroy(currentGameBeginCanvasInstance);
+        }
+
+        // 👇 实例化新的开始界面
+        if (gameBeginCanvasPrefab != null)
+        {
+            currentGameBeginCanvasInstance = Instantiate(gameBeginCanvasPrefab);
+            currentGameBeginCanvasInstance.SetActive(true);
+
+            // 确保它是 UI（通常 prefab 已设置为 Overlay，但可加日志）
+            Debug.Log("✅ 实例化 GameBeginCanvas Prefab");
+        }
+        else
+        {
+            Debug.LogError("❌ GameBeginCanvas Prefab 未指定！");
+            StartGame(); // 容错
+        }
+
+        // 暂停敌人生成器
+        foreach (var spawner in FindObjectsOfType<EnemySpawner>())
+            spawner.Pause();
+    }
+}
+
     void Start()
     {
-        StartLevelTimer();
         HideExitArrow();
+        // 显示开始界面
+        if (gameBeginCanvasPrefab != null)
+        {
+            gameBeginCanvasPrefab.SetActive(true);
+            hasGameStarted = false;
+        }
+        else
+        {
+            // 如果没指定 Canvas，则直接开始（开发容错）
+            StartGame();
+        }
+    }
+
+    public void StartGame()
+    {
+        Debug.Log("🚀 StartGame() 被调用！");
+        if (hasGameStarted) return;
+
+        hasGameStarted = true;
+
+        // 👇 隐藏并销毁开始界面
+        if (currentGameBeginCanvasInstance != null)
+        {
+            Destroy(currentGameBeginCanvasInstance); // 或 SetActive(false)，但 Destroy 更干净
+            currentGameBeginCanvasInstance = null;
+        }
+
+        // 👇 恢复当前场景中所有已存在的 EnemySpawner
+        var spawners = FindObjectsOfType<EnemySpawner>();
+        foreach (var spawner in spawners)
+        {
+            spawner.Resume();
+        }
+
+        // 启动关卡逻辑
+        StartLevelTimer();
+
+        Debug.Log("🎮 游戏正式开始！");
+    }
+
+    /// <summary>
+    /// 彻底重置游戏状态，用于“重新开始”
+    /// </summary>
+    public void ResetForNewGame()
+    {
+        // 重置金币
+        totalCoins = 0;
+        OnCoinsChanged?.Invoke(); // 通知 UI 更新
+    
+        // 重置生命和道具
+        persistentLives = 3;
+        persistentHeldPowerup = null;
+    
+        // 重置商店升级
+        bootsUpgradeLevel = 0;
+        pistolUpgradeLevel = 0;
+        ammoBagUpgradeLevel = 0;
+    
+        // 重置其他状态（按需添加）
+        hasClearedAllEnemies = false;
+        isRoundCompleted = false;
+        isLevelTimerActive = false;
+    
+        // 如果有更多全局状态，继续重置...
+    
+        Debug.Log("🔄 游戏状态已重置为新游戏");
+    }
+
+    void Update()
+    {
+        if (!hasGameStarted && Input.GetKeyDown(KeyCode.Space))
+        {
+            StartGame();
+        }
     }
 
     /// <summary>
@@ -87,6 +210,7 @@ public class GameController : MonoBehaviour
 
     public void StartLevelTimer()
     {
+        if (!hasGameStarted) return; // 👈 新增保护
         // 停止旧协程
         if (countdownCoroutine != null)
         {
@@ -123,6 +247,7 @@ public class GameController : MonoBehaviour
     /// </summary>
     public void AddTime(float seconds)
     {
+        if (!hasGameStarted || !isLevelTimerActive) return; // 👈 新增保护
         if (!isLevelTimerActive) return;
 
         // 🔑 关键：增加后不能超过 levelTime

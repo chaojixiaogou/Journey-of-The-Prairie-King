@@ -1594,6 +1594,11 @@ public class Enemy : MonoBehaviour
         }
     }
 
+    public int GetCurrentHealth()
+    {
+        return currentHealth;
+    }
+
     // 安全实例化辅助方法
     void InstantiateSafe(GameObject prefab)
     {

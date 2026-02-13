@@ -35,6 +35,14 @@ public class EnemySpawner : MonoBehaviour
     void Start()
     {
         GenerateSpawnPoints();
+
+        // 👇 关键：如果游戏还没开始，先暂停自己
+        if (!GameController.HasGameStarted)
+        {
+            isPaused = true;
+            Debug.Log("[EnemySpawner] 游戏尚未开始，暂停生成");
+        }
+        
         spawnCoroutine = StartCoroutine(SpawnLoop());
     }
 

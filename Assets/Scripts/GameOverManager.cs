@@ -1,5 +1,4 @@
 // GameOverManager.cs
-// 适用于 TextMeshPro (TMP) UI
 using UnityEngine;
 using TMPro;
 
@@ -63,10 +62,14 @@ public class GameOverManager : MonoBehaviour
     {
         if (selectedOption == 0)
         {
-            // 重新开始：加载当前场景
-            UnityEngine.SceneManagement.SceneManager.LoadScene(
-                UnityEngine.SceneManagement.SceneManager.GetActiveScene().buildIndex
-            );
+            // 👇 新增：重置全局游戏状态
+            if (GameController.Instance != null)
+            {
+                GameController.Instance.ResetForNewGame();
+            }
+
+            // 加载第一个场景（彻底重启）
+            UnityEngine.SceneManagement.SceneManager.LoadScene(0);
         }
         else
         {

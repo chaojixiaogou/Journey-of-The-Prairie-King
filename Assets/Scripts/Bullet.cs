@@ -74,8 +74,16 @@ public class Bullet : MonoBehaviour
             if(!isFromBoss){
                 if (enemy != null)
                 {
+                    int enemyCurrentHealth = enemy.GetCurrentHealth();
                     enemy.TakeDamage(damage);
+                    if(damage - enemyCurrentHealth > 0)
+                    {
+                        damage -= enemyCurrentHealth;
+                    }
+                    else
+                    {
                     Destroy(gameObject); // 击中后消失
+                    }
                 }
             }
         }
