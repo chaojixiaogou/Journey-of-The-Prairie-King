@@ -220,7 +220,7 @@ MonoBehaviour:
   deathSounds:
   - {fileID: 8300000, guid: efac3891c0e37644fb1dfe578e0b8aa2, type: 3}
   - {fileID: 8300000, guid: 95905327d454b454790f6ee17e312ee3, type: 3}
-  deathVolume: 0.6
+  deathVolume: 1
 --- !u!50 &-6926344824489527892
 Rigidbody2D:
   serializedVersion: 4

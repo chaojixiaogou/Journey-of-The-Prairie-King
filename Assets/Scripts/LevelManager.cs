@@ -170,6 +170,7 @@ public class LevelManager : MonoBehaviour
         }
         else
         {
+            GameController.Instance.isStopBGM = false;
             LoadNextScene();
 
             // ⏳ 等待新场景完全加载

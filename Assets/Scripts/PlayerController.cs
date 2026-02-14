@@ -175,6 +175,9 @@ public class PlayerController : MonoBehaviour
 
     public bool hasTriggeredNextLevel = false; // 👈 新增字段
 
+
+    public bool isGameOver = false;
+
     
 
     void Awake()
@@ -563,6 +566,7 @@ public class PlayerController : MonoBehaviour
         // if (false)
         if (currentLives < 0)
         {
+            isGameOver = true;
             StartCoroutine(PlayGameOverAnimation());
         }
         else

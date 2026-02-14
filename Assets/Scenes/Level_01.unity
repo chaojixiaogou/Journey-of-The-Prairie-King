@@ -2848,7 +2848,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   respawnDelay: 2
-  levelTime: 5
+  levelTime: 90
   player: {fileID: 1934913241}
   mapBottomY: -7.4
   exitArrow: {fileID: 0}
@@ -2857,7 +2857,10 @@ MonoBehaviour:
   pistolUpgradeLevel: 0
   ammoBagUpgradeLevel: 0
   exitArrowPrefab: {fileID: 4865877113646412598, guid: 9390bbc3ca3c88349a9067491cfef8cb, type: 3}
+  hasGameStarted: 0
   gameBeginCanvasPrefab: {fileID: 6394722270495100545, guid: 62644eef9168bad4dbd226b4c4a26e0d, type: 3}
+  canDetectIsReachBottom: 0
+  isStopBGM: 0
 --- !u!4 &1174951514
 Transform:
   m_ObjectHideFlags: 0
@@ -4020,6 +4023,7 @@ MonoBehaviour:
   useSmokeBombSound: {fileID: 8300000, guid: 539a08d28cdc939498b7961c9910d661, type: 3}
   usePowerupVolume: 0.8
   hasTriggeredNextLevel: 0
+  isGameOver: 0
 --- !u!61 &1934913239
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -4160,6 +4164,82 @@ Rigidbody2D:
   m_SleepingMode: 0
   m_CollisionDetection: 0
   m_Constraints: 0
+--- !u!1 &1963680275
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1963680277}
+  - component: {fileID: 1963680276}
+  m_Layer: 0
+  m_Name: BGMController
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1963680276
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1963680275}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ba48e3a9028ef6e4f8c67355b4cae029, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  sceneBGMs:
+  - sceneName: Level_01
+    bgmClip: {fileID: 8300000, guid: 880e8530de406ee4f80e289b584e8a01, type: 3}
+  - sceneName: Level_02
+    bgmClip: {fileID: 8300000, guid: 880e8530de406ee4f80e289b584e8a01, type: 3}
+  - sceneName: Level_03
+    bgmClip: {fileID: 8300000, guid: 880e8530de406ee4f80e289b584e8a01, type: 3}
+  - sceneName: Level_04
+    bgmClip: {fileID: 8300000, guid: 880e8530de406ee4f80e289b584e8a01, type: 3}
+  - sceneName: Level_05
+    bgmClip: {fileID: 8300000, guid: 880e8530de406ee4f80e289b584e8a01, type: 3}
+  - sceneName: Level_06
+    bgmClip: {fileID: 8300000, guid: 880e8530de406ee4f80e289b584e8a01, type: 3}
+  - sceneName: Level_07
+    bgmClip: {fileID: 8300000, guid: 880e8530de406ee4f80e289b584e8a01, type: 3}
+  - sceneName: Level_08
+    bgmClip: {fileID: 8300000, guid: 880e8530de406ee4f80e289b584e8a01, type: 3}
+  - sceneName: Level_09
+    bgmClip: {fileID: 8300000, guid: 880e8530de406ee4f80e289b584e8a01, type: 3}
+  - sceneName: Level_10
+    bgmClip: {fileID: 8300000, guid: 880e8530de406ee4f80e289b584e8a01, type: 3}
+  - sceneName: Level_11
+    bgmClip: {fileID: 8300000, guid: 880e8530de406ee4f80e289b584e8a01, type: 3}
+  - sceneName: Level_12
+    bgmClip: {fileID: 8300000, guid: 880e8530de406ee4f80e289b584e8a01, type: 3}
+  - sceneName: Boss_01
+    bgmClip: {fileID: 8300000, guid: b1f2e9137c44b9742bdd503cfec4deba, type: 3}
+  - sceneName: Boss_02
+    bgmClip: {fileID: 8300000, guid: b1f2e9137c44b9742bdd503cfec4deba, type: 3}
+  - sceneName: Boss_03
+    bgmClip: {fileID: 8300000, guid: d89862d1328d0c44e8d8738563317eac, type: 3}
+  volume: 1
+--- !u!4 &1963680277
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1963680275}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -2.4337544, y: -0.13467795, z: -0.09779314}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1989459080
 GameObject:
   m_ObjectHideFlags: 0
@@ -6819,3 +6899,4 @@ SceneRoots:
   - {fileID: 7724769986567051130}
   - {fileID: 2603551295430706379}
   - {fileID: 3750435754491377556}
+  - {fileID: 1963680277}

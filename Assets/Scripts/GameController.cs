@@ -58,7 +58,7 @@ public class GameController : MonoBehaviour
     [Header("开始界面")]
     // public GameObject gameBeginCanvas; // 在 Inspector 拖入你的 GameBeginCanvas
 
-    private bool hasGameStarted = false;
+    public bool hasGameStarted = false;
 
     public static bool HasGameStarted => Instance?.hasGameStarted == true;
 
@@ -68,6 +68,8 @@ public class GameController : MonoBehaviour
     private GameObject currentGameBeginCanvasInstance; // 当前实例的引用
 
     public bool canDetectIsReachBottom = false;
+
+    public bool isStopBGM = false;
     
 
     void Awake()
@@ -348,6 +350,7 @@ public class GameController : MonoBehaviour
 
     public void ShowExitArrow()
     {
+        isStopBGM = true;
         Debug.Log($"🔍 ShowExitArrow() 被调用，堆栈：\n{System.Environment.StackTrace}");
         if (spawnedExitArrow != null)
         {
