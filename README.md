@@ -27,7 +27,28 @@ Journey-of-The-Prairie-King/
 - 多样化的敌人类型
 - Boss 战斗机制
 - 粒子特效与视觉优化
+- 丰富的背景音乐和音效
 - 可扩展的游戏架构
+
+## 📸 运行截图
+
+### 游戏主界面
+![主菜单界面](Picture/main_menu.png)
+
+### 游戏进行中
+![游戏进行中](Picture/gameplay1.png)
+![游戏进行中](Picture/gameplay2.png)
+
+### Boss 战斗场景
+![Boss战斗](Picture/boss_battle1.png)
+![Boss战斗](Picture/boss_battle2.png)
+
+### 商店界面
+![商店界面](Picture/shop.png)
+
+### 游戏结束界面
+![游戏结束](Picture/game_over.png)
+
 
 ## 📥 如何运行
 
