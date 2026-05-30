@@ -31,6 +31,8 @@ Journey-of-The-Prairie-King/
 - 可扩展的游戏架构
 
 ## 📸 运行截图
+### 演示视频
+https://www.bilibili.com/video/BV1xXV36CEMM
 
 ### 游戏主界面
 ![主菜单界面](Picture/main_menu.png)
