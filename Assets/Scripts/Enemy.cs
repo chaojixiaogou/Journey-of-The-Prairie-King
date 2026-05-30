@@ -63,6 +63,8 @@ public class Enemy : MonoBehaviour
     private bool sentryPathComputed = false; // 是否已计算路径
 
     private Vector3? sentryTargetPosition = null; // 哨兵的目标点（Nullable）
+    private float sentryStuckTimer = 0f;
+    private const float SENTRY_STUCK_REPATH_TIME = 0.35f;
 
     [Header("=== Boss 配置 ===")]
     public BossType bossType = BossType.Cowboy;
@@ -429,6 +431,8 @@ public class Enemy : MonoBehaviour
             return;
         }
 
+        UpdateSentryStuckRecovery();
+
         // 使用专用路径跟随
         if (currentPath != null && currentPath.Count > 0)
         {
@@ -446,6 +450,40 @@ public class Enemy : MonoBehaviour
             isSentryActivated = true;
             ActivateSentryMode();
         }
+    }
+
+    void UpdateSentryStuckRecovery()
+    {
+        if (!sentryTargetPosition.HasValue) return;
+
+        float movedDistance = Vector2.Distance(transform.position, lastPosition);
+        if (movedDistance < 0.01f)
+            sentryStuckTimer += Time.deltaTime;
+        else
+            sentryStuckTimer = 0f;
+
+        lastPosition = transform.position;
+
+        if (sentryStuckTimer < SENTRY_STUCK_REPATH_TIME) return;
+
+        sentryStuckTimer = 0f;
+
+        List<Vector3> repath = FindPath(transform.position, sentryTargetPosition.Value);
+        if (repath != null && repath.Count > 0)
+        {
+            currentPath = repath;
+            currentPathIndex = 0;
+            return;
+        }
+
+        FindRandomValidSentryPosition();
+        if (sentryTargetPosition.HasValue)
+        {
+            currentPath = FindPath(transform.position, sentryTargetPosition.Value);
+            currentPathIndex = 0;
+        }
+
+        sentryPathComputed = true;
     }
 
     void ActivateSentryMode()
@@ -534,9 +572,27 @@ public class Enemy : MonoBehaviour
             {
                 transform.position = smallStep;
                 isMovingThisFrame = true;
+                return;
             }
-            // 否则：这一帧不动（等待障碍离开）
-            // （不会左右滑动，不会穿墙）
+
+            Vector2 slideRight = new Vector2(-direction.y, direction.x);
+            Vector2 slideLeft = new Vector2(direction.y, -direction.x);
+            Vector2 rightPos = (Vector2)transform.position + slideRight * moveSpeed * Time.deltaTime;
+            Vector2 leftPos = (Vector2)transform.position + slideLeft * moveSpeed * Time.deltaTime;
+
+            if (Physics2D.OverlapCircle(rightPos, radius, obstacleLayer) == null)
+            {
+                transform.position = rightPos;
+                isMovingThisFrame = true;
+                return;
+            }
+
+            if (Physics2D.OverlapCircle(leftPos, radius, obstacleLayer) == null)
+            {
+                transform.position = leftPos;
+                isMovingThisFrame = true;
+            }
+            // 否则：这一帧不动，等待卡住检测触发重新寻路
         }
     }
 
